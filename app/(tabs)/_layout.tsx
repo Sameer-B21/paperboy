@@ -21,10 +21,8 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        // sceneContainerStyle: { backgroundColor: palette.background },
         tabBarActiveTintColor: palette.accent,
         tabBarInactiveTintColor: palette.secondaryText,
-        // tabBarActiveBackgroundColor: palette.mutedAccent,
         tabBarHideOnKeyboard: true,
         headerShown: false,
         tabBarButton: HapticTab,
@@ -33,20 +31,8 @@ export default function TabLayout() {
           backgroundColor: palette.card,
           borderTopWidth: 0,
           height: 70,
-          // marginHorizontal: 18,
-          // marginBottom: 18,
-          // paddingHorizontal: 18,
-          // paddingVertical: 10,
-          // paddingTop: 10,
-          // borderRadius: 22,
-          // shadowColor: '#0F172A',
-          // shadowOpacity: colorScheme === 'dark' ? 0.35 : 0.08,
-          // shadowRadius: 20,
-          // shadowOffset: { width: 0, height: 10 },
-          // elevation: 8,
         },
         tabBarItemStyle: {
-          // borderRadius: 14,
           alignSelf: 'center',
         },
         tabBarLabelStyle: {

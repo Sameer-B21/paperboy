@@ -1,98 +1,217 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export default function HomeScreen() {
+import { Fonts } from '@/constants/theme';
+import { briefs } from '@/data/briefs';
+
+const palette = {
+  background: '#F8FAFC',
+  card: '#FFFFFF',
+  primaryText: '#0F172A',
+  secondaryText: '#94A3B8',
+  accent: '#F6A34D',
+  accentShadow: '#E18A28',
+  pill: '#EEF2F6',
+  border: '#E2E8F0',
+};
+
+export default function ExploreScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.greeting}>Company Logo</Text>
+          </View>
+          <TouchableOpacity style={styles.iconButton} activeOpacity={0.7} accessibilityRole="button">
+            <Ionicons name="bookmark-outline" size={22} color={palette.secondaryText} />
+          </TouchableOpacity>
+        </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <View style={styles.heroCard}>
+          <Text style={styles.dateText}>Archive</Text>
+          <Text style={styles.title}>Daily briefing library</Text>
+          <Text style={styles.summaryText}>
+            Revisit earlier episodes in the same calm format you listen to each morning. Tap any
+            date to open the full brief.
+          </Text>
+        </View>
+
+        <View style={styles.listHeader}>
+          <Text style={styles.listTitle}>Past daily briefs</Text>
+          <View style={styles.metaPill}>
+            <Text style={styles.metaText}>{briefs.length} saved</Text>
+          </View>
+        </View>
+        
+
+          
+        {briefs && briefs.map((brief) => (
+          <Link
+            key={brief.id}
+            href={{ pathname: '/briefs/[id]', params: { id: brief.id } }}
+            asChild
+          >
+            <TouchableOpacity
+              style={styles.briefCard}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+            >
+              <View style={styles.briefHeader}>
+                <Text style={styles.briefDate}>{brief.dateLabel}</Text>
+                <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
+              </View>
+              <Text style={styles.briefTitle}>{brief.title}</Text>
+              <View style={styles.metaRow}>
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaText}>{brief.duration}</Text>
+                </View>
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaText}>{brief.intensity}</Text>
+                </View>
+                <View style={styles.metaPill}>
+                  <Text style={styles.metaText}>{brief.voice}</Text>
+                </View>
+              </View>
+              <Text style={styles.briefSummary}>{brief.summary}</Text>
+            </TouchableOpacity>
+          </Link>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: palette.background,
+  },
+  scrollContent: {
+    paddingTop: 26,
+    paddingHorizontal: 22,
+    paddingBottom: 70,
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    marginBottom: 26,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  greeting: {
+    color: palette.secondaryText,
+    fontSize: 15,
+    fontFamily: Fonts.sans,
+    letterSpacing: 0.2,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  headerTitle: {
+    color: palette.primaryText,
+    fontSize: 20,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+    marginTop: 6,
+  },
+  iconButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    backgroundColor: '#EFF4FB',
+  },
+  heroCard: {
+    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    gap: 14,
+    marginBottom: 25,
+    elevation: 4,
+  },
+  dateText: {
+    color: palette.secondaryText,
+    fontSize: 14,
+    fontFamily: Fonts.sans,
+    letterSpacing: 0.3,
+  },
+  title: {
+    color: palette.primaryText,
+    fontSize: 24,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  listTitle: {
+    color: palette.primaryText,
+    fontSize: 18,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+    marginBottom: 12,
+  },
+  metaPill: {
+    backgroundColor: palette.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+  },
+  metaText: {
+    color: '#475569',
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    letterSpacing: 0.1,
+  },
+  summaryText: {
+    color: '#475569',
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: Fonts.sans,
+  },
+  briefCard: {
+    backgroundColor: palette.card,
+    borderRadius: 18,
+    padding: 20,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  briefHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  briefDate: {
+    color: palette.secondaryText,
+    fontSize: 14,
+    fontFamily: Fonts.sans,
+  },
+  briefTitle: {
+    color: palette.primaryText,
+    fontSize: 20,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  briefSummary: {
+    color: '#475569',
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: Fonts.sans,
   },
 });
