@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
 
@@ -59,14 +59,34 @@ export default function TodayScreen() {
           </View>
 
           <View style={styles.playSection}>
-            <TouchableOpacity
-              style={styles.playButton}
-              activeOpacity={0.9}
-              accessibilityRole="button"
-              onPress={handlePlayPress} // Add onPress handler
-            >
-              <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color="#ffffff" />
-            </TouchableOpacity>
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={styles.skipButton}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Skip back 10 seconds"
+              >
+                <Ionicons name="play-back" size={18} color={palette.primaryText} />
+                <Text style={styles.skipLabel}>10s</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.playButton}
+                activeOpacity={0.9}
+                accessibilityRole="button"
+                onPress={handlePlayPress}
+              >
+                <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color="#ffffff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.skipButton}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Skip forward 10 seconds"
+              >
+                <Ionicons name="play-forward" size={18} color={palette.primaryText} />
+                <Text style={styles.skipLabel}>10s</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.playHint}>
               {isPlaying ? 'Playing...' : 'Press play to ease into the day'}
             </Text>
@@ -102,7 +122,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 26,
     paddingHorizontal: 22,
-    paddingBottom: 30,
+    paddingBottom: 80,
   },
   headerRow: {
     flexDirection: 'row',
@@ -125,15 +145,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF4FB',
   },
   heroCard: {
-    // backgroundColor: palette.card,
     borderRadius: 20,
     paddingVertical: 26,
     paddingHorizontal: 22,
     gap: 16,
-    // shadowColor: '#0F172A',
-    // shadowOpacity: 0.06,
-    // shadowRadius: 20,
-    // shadowOffset: { width: 0, height: 10 },
     elevation: 4,
   },
   dateText: {
@@ -177,7 +192,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '80%',
     marginTop: 4,
+  },
+  skipButton: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: palette.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  skipLabel: {
+    color: palette.primaryText,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    letterSpacing: 0.2,
   },
   playButton: {
     width: 82,

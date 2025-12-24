@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
 import { briefs } from '@/data/briefs';
@@ -81,14 +81,34 @@ export default function BriefDetailScreen() {
           </View>
 
           <View style={styles.playSection}>
-            <TouchableOpacity
-              style={styles.playButton}
-              activeOpacity={0.9}
-              accessibilityRole="button"
-              onPress={handlePlayPress}
-            >
-              <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color="#ffffff" />
-            </TouchableOpacity>
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={styles.skipButton}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Skip back 10 seconds"
+              >
+                <Ionicons name="play-back" size={18} color={palette.primaryText} />
+                <Text style={styles.skipLabel}>10s</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.playButton}
+                activeOpacity={0.9}
+                accessibilityRole="button"
+                onPress={handlePlayPress}
+              >
+                <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color="#ffffff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.skipButton}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Skip forward 10 seconds"
+              >
+                <Ionicons name="play-forward" size={18} color={palette.primaryText} />
+                <Text style={styles.skipLabel}>10s</Text>
+              </TouchableOpacity>
+            </View>
             <Text style={styles.playHint}>
               {isPlaying ? 'Playing...' : 'Press play to ease into the day'}
             </Text>
@@ -184,6 +204,29 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingTop: 6,
     marginBottom: 20,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '80%',
+    marginTop: 4,
+  },
+  skipButton: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: palette.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  skipLabel: {
+    color: palette.primaryText,
+    fontSize: 11,
+    fontFamily: Fonts.sans,
+    letterSpacing: 0.2,
   },
   playButton: {
     width: 82,
