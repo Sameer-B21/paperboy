@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { API_BASE_URL } from '@/constants/api';
 import { Fonts } from '@/constants/theme';
 
 const palette = {
@@ -17,9 +18,111 @@ const palette = {
 
 export default function TodayScreen() {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackStatus, setPlaybackStatus] = useState<
+    'idle' | 'ingesting' | 'generating' | 'polling' | 'ready' | 'error'
+  >('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [podcastScript, setPodcastScript] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
-  const handlePlayPress = () => {
+  const isBusy = playbackStatus === 'ingesting' || playbackStatus === 'generating' || playbackStatus === 'polling';
+  const statusText = useMemo(() => {
+    if (errorMessage) {
+      return errorMessage;
+    }
+    switch (playbackStatus) {
+      case 'ingesting':
+        return 'Sending today’s brief to the studio...';
+      case 'generating':
+        return 'Generating your podcast script...';
+      case 'polling':
+        return 'Finalizing the audio transcript...';
+      case 'ready':
+        return 'Your briefing is ready to play.';
+      default:
+        return 'Press play to generate today’s briefing.';
+    }
+  }, [errorMessage, playbackStatus]);
+
+  const handlePlayPress = async () => {
+    if (isBusy) {
+      return;
+    }
+    if (playbackStatus !== 'ready') {
+      await generatePodcast();
+      return;
+    }
     setIsPlaying((prev) => !prev);
+  };
+
+  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const generatePodcast = async () => {
+    setErrorMessage(null);
+    setPlaybackStatus('ingesting');
+
+    try {
+      const ingestResponse = await fetch(`${API_BASE_URL}/ingest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: 'Your Morning Brief',
+          content:
+            "Markets steadied overnight while energy stocks led the way. We also cover a fresh cultural moment, plus one smart take-away to start the week.\n\nYour Morning Brief is a gentle, story-driven podcast that distills the day's most important headlines into a calm seven-minute listen. Each episode blends crisp context, thoughtful insight, and an easygoing narration so you can start your day informed and grounded.",
+        }),
+      });
+
+      if (!ingestResponse.ok) {
+        throw new Error('Unable to ingest the briefing content.');
+      }
+
+      const ingestPayload = (await ingestResponse.json()) as { contentId: string };
+      setPlaybackStatus('generating');
+
+      const generateResponse = await fetch(`${API_BASE_URL}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contentId: ingestPayload.contentId }),
+      });
+
+      if (!generateResponse.ok) {
+        throw new Error('Unable to start podcast generation.');
+      }
+
+      const generatePayload = (await generateResponse.json()) as { jobId: string };
+      setPlaybackStatus('polling');
+
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        const statusResponse = await fetch(`${API_BASE_URL}/status/${generatePayload.jobId}`);
+        if (!statusResponse.ok) {
+          throw new Error('Unable to check podcast status.');
+        }
+
+        const statusPayload = (await statusResponse.json()) as { status: string; error?: string };
+        if (statusPayload.status === 'completed') {
+          const podcastResponse = await fetch(`${API_BASE_URL}/podcast/${generatePayload.jobId}`);
+          if (!podcastResponse.ok) {
+            throw new Error('Unable to load the generated podcast.');
+          }
+          const podcastPayload = (await podcastResponse.json()) as { script: string; audioUrl: string };
+          setPodcastScript(podcastPayload.script);
+          setAudioUrl(podcastPayload.audioUrl);
+          setPlaybackStatus('ready');
+          return;
+        }
+
+        if (statusPayload.status === 'failed') {
+          throw new Error(statusPayload.error ?? 'The podcast generation failed.');
+        }
+
+        await delay(1200);
+      }
+
+      throw new Error('The podcast took too long to generate.');
+    } catch (error) {
+      setPlaybackStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Something went wrong.');
+    }
   };
   
   const todayLabel = new Date().toLocaleDateString(undefined, {
@@ -74,8 +177,13 @@ export default function TodayScreen() {
                 activeOpacity={0.9}
                 accessibilityRole="button"
                 onPress={handlePlayPress}
+                disabled={isBusy}
               >
-                <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color="#ffffff" />
+                {isBusy ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color="#ffffff" />
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.skipButton}
@@ -90,6 +198,7 @@ export default function TodayScreen() {
             <Text style={styles.playHint}>
               {isPlaying ? 'Playing...' : 'Press play to ease into the day'}
             </Text>
+            <Text style={[styles.statusText, errorMessage ? styles.errorText : null]}>{statusText}</Text>
           </View>
 
           <View style={styles.progressBlock}>
@@ -100,14 +209,14 @@ export default function TodayScreen() {
           </View>
         </View>
         <View style={styles.summaryCard} accessibilityRole="summary">
-          <Text style={styles.summaryTitle}>About the podcast</Text>
+          <Text style={styles.summaryTitle}>{podcastScript ? 'Generated script' : 'About the podcast'}</Text>
           <Text style={styles.summaryText}>
-            Your Morning Brief is a gentle, story-driven podcast that distills the day&apos;s most
-            important headlines into a calm seven-minute listen. Each episode blends crisp context,
-            thoughtful insight, and an easygoing narration so you can start your day informed and
-            grounded. Expect a balanced mix of global news, culture, and smart takeaways designed
-            to help you feel prepared without feeling overwhelmed.
+            {podcastScript ??
+              "Your Morning Brief is a gentle, story-driven podcast that distills the day's most important headlines into a calm seven-minute listen. Each episode blends crisp context, thoughtful insight, and an easygoing narration so you can start your day informed and grounded. Expect a balanced mix of global news, culture, and smart takeaways designed to help you feel prepared without feeling overwhelmed."}
           </Text>
+          {audioUrl ? (
+            <Text style={styles.audioHint}>Audio ready at {audioUrl.replace(/^https?:\/\//, '')}</Text>
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -229,6 +338,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Fonts.sans,
   },
+  statusText: {
+    color: palette.secondaryText,
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: '#EF4444',
+  },
   progressBlock: {
     gap: 8,
     paddingTop: 6,
@@ -272,6 +390,11 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontSize: 16,
     lineHeight: 24,
+    fontFamily: Fonts.sans,
+  },
+  audioHint: {
+    color: palette.secondaryText,
+    fontSize: 12,
     fontFamily: Fonts.sans,
   },
 });
