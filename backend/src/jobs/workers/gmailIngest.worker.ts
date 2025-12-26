@@ -1,11 +1,19 @@
 import { jobQueue } from "../queue.js";
-import { syncNewslettersForUser } from "../../services/gmail/gmailSync.js";
+import { discoverNewslettersForUser, ingestNewsletterForUser } from "../../services/gmail/gmailSync.js";
 import { summarizeEpisode } from "./summarize.worker.js";
 import { generateEpisodeAudio } from "./tts.worker.js";
 import { updateEpisode } from "../../db/queries/episodes.sql.js";
 
-export async function enqueueGmailIngest(userId: string): Promise<{ queued: number }> {
-  const seeds = await syncNewslettersForUser(userId);
+export async function enqueueGmailDiscovery(userId: string): Promise<{ discovered: number }> {
+  const discovered = await discoverNewslettersForUser(userId);
+  return { discovered };
+}
+
+export async function enqueueNewsletterIngest(
+  userId: string,
+  senderEmail: string
+): Promise<{ queued: number }> {
+  const seeds = await ingestNewsletterForUser(userId, senderEmail);
   if (seeds.length === 0) {
     return { queued: 0 };
   }

@@ -4,6 +4,7 @@ import { getEpisode, listEpisodes } from "../db/queries/episodes.sql.js";
 import { downloadAudio } from "../services/storage/uploadAudio.js";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/errors.js";
+import { runDailyDigestForUser } from "../jobs/workers/dailyDigest.worker.js";
 
 function readUserId(req: Request): string {
   const userId = req.header("x-user-id") ?? req.query.userId;
@@ -53,4 +54,10 @@ export async function getBriefAudio(req: Request, res: Response) {
   const audio = await downloadAudio(episode.audioPath);
   res.setHeader("Content-Type", audio.contentType ?? "text/plain; charset=utf-8");
   res.send(audio.data);
+}
+
+export async function generateDailyBrief(req: Request, res: Response) {
+  const userId = readUserId(req);
+  void runDailyDigestForUser(userId);
+  res.json({ status: "queued" });
 }

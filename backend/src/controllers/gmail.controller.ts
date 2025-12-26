@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 
-import { enqueueGmailIngest } from "../jobs/workers/gmailIngest.worker.js";
-import { runDailyDigestForUser } from "../jobs/workers/dailyDigest.worker.js";
+import { enqueueGmailDiscovery, enqueueNewsletterIngest } from "../jobs/workers/gmailIngest.worker.js";
 import { listNewsletters, updateNewsletterSelection } from "../db/queries/newsletters.sql.js";
 import { AppError } from "../utils/errors.js";
 import { requireString } from "../utils/validate.js";
@@ -16,10 +15,7 @@ function readUserId(req: Request): string {
 
 export async function syncGmail(req: Request, res: Response) {
   const userId = readUserId(req);
-  const result = await enqueueGmailIngest(userId);
-  if (result.queued > 0) {
-    void runDailyDigestForUser(userId);
-  }
+  const result = await enqueueGmailDiscovery(userId);
   res.json(result);
 }
 
@@ -38,5 +34,8 @@ export async function updateNewsletter(req: Request, res: Response) {
     return;
   }
   const updated = await updateNewsletterSelection(userId, newsletterId, selected);
+  if (updated.selected) {
+    void enqueueNewsletterIngest(userId, updated.sender);
+  }
   res.json({ newsletter: updated });
 }

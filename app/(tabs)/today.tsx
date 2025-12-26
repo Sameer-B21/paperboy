@@ -4,7 +4,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
-import { getBrief, listBriefs, syncGmail } from '@/data/backend';
+import { generateDailyBrief, getBrief, listBriefs } from '@/data/backend';
 
 const palette = {
   background: '#F8FAFC',
@@ -63,16 +63,19 @@ export default function TodayScreen() {
     setPlaybackStatus('ingesting');
 
     try {
-      await syncGmail();
+      await generateDailyBrief();
       setPlaybackStatus('generating');
 
       setPlaybackStatus('polling');
 
-      for (let attempt = 0; attempt < 10; attempt += 1) {
+      for (let attempt = 0; attempt < 30; attempt += 1) {
         const episodes = await listBriefs();
-        const completed = episodes.find((episode) => episode.status === 'completed');
-        if (completed) {
-          const detail = await getBrief(completed.id);
+        const digest = episodes.find((episode) =>
+          episode.subject.toLowerCase().includes('daily newsletter digest')
+        );
+
+        if (digest && digest.status === 'completed') {
+          const detail = await getBrief(digest.id);
           setPodcastScript(detail.script);
           setAudioUrl(detail.audioUrl);
           setBriefTitle(detail.subject);
@@ -80,7 +83,7 @@ export default function TodayScreen() {
           return;
         }
 
-        await delay(1200);
+        await delay(1500);
       }
 
       throw new Error('The podcast took too long to generate.');

@@ -13,7 +13,6 @@ export async function summarizeEpisode(payload: {
   await updateEpisode(payload.episodeId, {
     summary,
     script,
-    status: "processing",
   });
 
   return { summary, script };

@@ -56,7 +56,7 @@ export async function fetchAuthUrl(): Promise<string> {
   return payload.url;
 }
 
-export async function syncGmail(): Promise<{ queued: number }> {
+export async function syncGmail(): Promise<{ discovered: number }> {
   await requireUserId();
   const response = await fetch(`${API_BASE_URL}/gmail/sync`, {
     method: 'POST',
@@ -65,7 +65,7 @@ export async function syncGmail(): Promise<{ queued: number }> {
   if (!response.ok) {
     throw new Error('Unable to sync Gmail.');
   }
-  return (await response.json()) as { queued: number };
+  return (await response.json()) as { discovered: number };
 }
 
 export async function listNewsletters(): Promise<NewsletterResponse[]> {
@@ -118,4 +118,15 @@ export async function getBrief(episodeId: string): Promise<EpisodeDetail> {
     throw new Error('Unable to load brief.');
   }
   return (await response.json()) as EpisodeDetail;
+}
+
+export async function generateDailyBrief(): Promise<void> {
+  await requireUserId();
+  const response = await fetch(`${API_BASE_URL}/briefs/daily`, {
+    method: 'POST',
+    headers: await buildHeaders(true),
+  });
+  if (!response.ok) {
+    throw new Error('Unable to generate daily brief.');
+  }
 }

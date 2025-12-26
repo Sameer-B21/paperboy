@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fonts } from '@/constants/theme';
 import {
   fetchAuthUrl,
+  generateDailyBrief,
   listNewsletters,
   syncGmail,
   updateNewsletterSelection,
@@ -49,7 +50,10 @@ export default function SettingsScreen() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [userEmail, setUserEmailState] = useState<string>('');
+  const [hasDiscovered, setHasDiscovered] = useState(false);
+  const [updatingIds, setUpdatingIds] = useState<string[]>([]);
 
   const selectedCount = useMemo(
     () => newsletters.filter((newsletter) => newsletter.selected).length,
@@ -84,6 +88,7 @@ export default function SettingsScreen() {
         setUserEmailState(storedEmail);
       }
       await loadNewsletters();
+      setHasDiscovered(true);
     };
     void boot();
   }, []);
@@ -99,18 +104,45 @@ export default function SettingsScreen() {
         setUserEmailState(params.email);
       }
       if (params.userId || params.email || params.connected) {
+        setHasDiscovered(false);
         await loadNewsletters();
       }
     };
     void applyParams();
   }, [params]);
 
+  useEffect(() => {
+    const autoDiscover = async () => {
+      if (!isConnected || hasDiscovered) {
+        return;
+      }
+      setHasDiscovered(true);
+      setIsSyncing(true);
+      setIsLoading(true);
+      try {
+        const result = await syncGmail();
+        setStatusMessage(`Discovered ${result.discovered} newsletters.`);
+        await loadNewsletters();
+      } catch (error) {
+        setStatusMessage(error instanceof Error ? error.message : 'Unable to sync Gmail.');
+      } finally {
+        setIsSyncing(false);
+        setIsLoading(false);
+      }
+    };
+    void autoDiscover();
+  }, [isConnected, hasDiscovered]);
+
   const toggleNewsletter = async (id: string) => {
+    if (updatingIds.includes(id)) {
+      return;
+    }
     const current = newsletters.find((item) => item.id === id);
     if (!current) {
       return;
     }
     const nextSelected = !current.selected;
+    setUpdatingIds((prev) => [...prev, id]);
     setNewsletters((prev) =>
       prev.map((newsletter) =>
         newsletter.id === id ? { ...newsletter, selected: nextSelected } : newsletter
@@ -125,6 +157,8 @@ export default function SettingsScreen() {
           newsletter.id === id ? { ...newsletter, selected: current.selected } : newsletter
         )
       );
+    } finally {
+      setUpdatingIds((prev) => prev.filter((entry) => entry !== id));
     }
   };
 
@@ -145,13 +179,26 @@ export default function SettingsScreen() {
     setStatusMessage(null);
     try {
       const result = await syncGmail();
-      setStatusMessage(`Sync queued ${result.queued} newsletters.`);
+      setStatusMessage(`Discovered ${result.discovered} newsletters.`);
       await loadNewsletters();
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : 'Unable to sync Gmail.');
     } finally {
       setIsSyncing(false);
       setIsLoading(false);
+    }
+  };
+
+  const handleGenerateBrief = async () => {
+    setIsGenerating(true);
+    setStatusMessage(null);
+    try {
+      await generateDailyBrief();
+      setStatusMessage('Daily brief queued. Check Today in a moment.');
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Unable to generate daily brief.');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -234,7 +281,36 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Select newsletters</Text>
+          <Text style={styles.sectionTitle}>Step 2 · Discover newsletters</Text>
+          <View style={styles.metaPill}>
+            <Text style={styles.metaText}>{newsletters.length} found</Text>
+          </View>
+        </View>
+
+        <View style={styles.rulesCard}>
+          <View style={styles.ruleRow}>
+            <View>
+              <Text style={styles.ruleTitle}>Scan inbox</Text>
+              <Text style={styles.ruleSubtitle}>
+                We scan the last 30 days and list newsletter senders as inactive.
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.ghostButton}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              onPress={handleSyncPress}
+              disabled={isSyncing || !isConnected}
+            >
+              <Text style={styles.ghostButtonText}>
+                {isSyncing ? 'Scanning...' : 'Find newsletters'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Step 3 · Select newsletters</Text>
           <View style={styles.metaPill}>
             <Text style={styles.metaText}>{selectedCount} selected</Text>
           </View>
@@ -261,6 +337,7 @@ export default function SettingsScreen() {
                   trackColor={{ false: '#E2E8F0', true: palette.accent }}
                   thumbColor={newsletter.selected ? '#ffffff' : '#ffffff'}
                   ios_backgroundColor="#E2E8F0"
+                  disabled={updatingIds.includes(newsletter.id) || !isConnected}
                 />
               </View>
             ))
@@ -268,6 +345,29 @@ export default function SettingsScreen() {
         </View>
 
         {statusMessage ? <Text style={styles.statusMessage}>{statusMessage}</Text> : null}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Step 4 · Generate daily brief</Text>
+        </View>
+
+        <View style={styles.connectionCard}>
+          <Text style={styles.cardTitle}>One briefing, every day</Text>
+          <Text style={styles.cardSubtitle}>
+            We combine all selected newsletters from the last 24 hours into a single audio brief.
+          </Text>
+          <TouchableOpacity
+            style={styles.connectButton}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            onPress={handleGenerateBrief}
+            disabled={isGenerating || selectedCount === 0}
+          >
+            <Ionicons name="play-circle" size={18} color="#0B1F3A" />
+            <Text style={styles.connectButtonText}>
+              {isGenerating ? 'Generating...' : 'Generate today’s brief'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Import rules</Text>

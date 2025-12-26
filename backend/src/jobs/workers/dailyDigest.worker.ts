@@ -52,10 +52,8 @@ export async function runDailyDigestForUser(
   });
 
   try {
-    await updateEpisode(digestEpisode.id, { status: "processing" });
-
     const { summary, script } = await buildDailyDigestScript({ dateLabel, items });
-    await updateEpisode(digestEpisode.id, { summary, script, status: "processing" });
+    await updateEpisode(digestEpisode.id, { summary, script });
 
     const audioPath = await uploadAudio(digestEpisode.id, generateAudio(script));
     await updateEpisode(digestEpisode.id, { audioPath, status: "completed" });
