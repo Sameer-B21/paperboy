@@ -1,7 +1,7 @@
-// import dotenv from "dotenv";
+import dotenv from "dotenv";
 
-// dotenv.config();
-import 'dotenv/config';
+dotenv.config();
+// import 'dotenv/config';
 
 export type Env = {
   NODE_ENV: string;
@@ -16,6 +16,7 @@ export type Env = {
   TOKEN_ENCRYPTION_KEY: string;
   OPENAI_API_KEY: string;
   OPENAI_MODEL?: string;
+  FRONTEND_URL?: string;
 };
 
 function requireEnv(key: string): string {
@@ -39,4 +40,5 @@ export const env: Env = {
   TOKEN_ENCRYPTION_KEY: requireEnv("TOKEN_ENCRYPTION_KEY"),
   OPENAI_API_KEY: requireEnv("OPENAI_API_KEY"),
   OPENAI_MODEL: process.env.OPENAI_MODEL,
+  FRONTEND_URL: process.env.FRONTEND_URL,
 };

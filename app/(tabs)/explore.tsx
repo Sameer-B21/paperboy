@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Fonts } from '@/constants/theme';
-import { briefs } from '@/data/briefs';
+import { listBriefs } from '@/data/backend';
 
 const palette = {
   background: '#F8FAFC',
@@ -18,6 +19,46 @@ const palette = {
 };
 
 export default function ExploreScreen() {
+  const [briefs, setBriefs] = useState<
+    Array<{
+      id: string;
+      dateLabel: string;
+      title: string;
+      status: string;
+      summary: string;
+    }>
+  >([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const loadBriefs = async () => {
+    setIsLoading(true);
+    try {
+      const episodes = await listBriefs();
+      const mapped = episodes.map((episode) => ({
+        id: episode.id,
+        dateLabel: new Date(episode.createdAt).toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+        }),
+        title: episode.subject,
+        status: episode.status,
+        summary:
+          episode.status === 'completed'
+            ? 'Ready to play. Tap to read the script.'
+            : 'Processing. Check back soon.',
+      }));
+      setBriefs(mapped);
+    } catch {
+      setBriefs([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadBriefs();
+  }, []);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -51,8 +92,10 @@ export default function ExploreScreen() {
         </View>
         
 
-          
-        {briefs && briefs.map((brief) => (
+        {isLoading ? (
+          <Text style={styles.summaryText}>Loading briefs...</Text>
+        ) : (
+          briefs.map((brief) => (
           <Link
             key={brief.id}
             href={{ pathname: '/briefs/[id]', params: { id: brief.id } }}
@@ -70,19 +113,20 @@ export default function ExploreScreen() {
               <Text style={styles.briefTitle}>{brief.title}</Text>
               <View style={styles.metaRow}>
                 <View style={styles.metaPill}>
-                  <Text style={styles.metaText}>{brief.duration}</Text>
+                  <Text style={styles.metaText}>{brief.status}</Text>
                 </View>
                 <View style={styles.metaPill}>
-                  <Text style={styles.metaText}>{brief.intensity}</Text>
+                  <Text style={styles.metaText}>Auto</Text>
                 </View>
                 <View style={styles.metaPill}>
-                  <Text style={styles.metaText}>{brief.voice}</Text>
+                  <Text style={styles.metaText}>Warm voice</Text>
                 </View>
               </View>
               <Text style={styles.briefSummary}>{brief.summary}</Text>
             </TouchableOpacity>
           </Link>
-        ))}
+          ))
+        )}
       </ScrollView>
     </SafeAreaView>
   );

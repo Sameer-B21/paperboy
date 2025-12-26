@@ -3,8 +3,8 @@ import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { API_BASE_URL } from '@/constants/api';
 import { Fonts } from '@/constants/theme';
+import { getBrief, listBriefs, syncGmail } from '@/data/backend';
 
 const palette = {
   background: '#F8FAFC',
@@ -24,6 +24,7 @@ export default function TodayScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [podcastScript, setPodcastScript] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [briefTitle, setBriefTitle] = useState<string>('Your Morning Brief');
 
   const isBusy = playbackStatus === 'ingesting' || playbackStatus === 'generating' || playbackStatus === 'polling';
   const statusText = useMemo(() => {
@@ -32,9 +33,9 @@ export default function TodayScreen() {
     }
     switch (playbackStatus) {
       case 'ingesting':
-        return 'Sending today’s brief to the studio...';
+        return 'Syncing your inbox...';
       case 'generating':
-        return 'Generating your podcast script...';
+        return 'Building your daily script...';
       case 'polling':
         return 'Finalizing the audio transcript...';
       case 'ready':
@@ -62,57 +63,21 @@ export default function TodayScreen() {
     setPlaybackStatus('ingesting');
 
     try {
-      const ingestResponse = await fetch(`${API_BASE_URL}/ingest`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: 'Your Morning Brief',
-          content:
-            "Markets steadied overnight while energy stocks led the way. We also cover a fresh cultural moment, plus one smart take-away to start the week.\n\nYour Morning Brief is a gentle, story-driven podcast that distills the day's most important headlines into a calm seven-minute listen. Each episode blends crisp context, thoughtful insight, and an easygoing narration so you can start your day informed and grounded.",
-        }),
-      });
-
-      if (!ingestResponse.ok) {
-        throw new Error('Unable to ingest the briefing content.');
-      }
-
-      const ingestPayload = (await ingestResponse.json()) as { contentId: string };
+      await syncGmail();
       setPlaybackStatus('generating');
 
-      const generateResponse = await fetch(`${API_BASE_URL}/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contentId: ingestPayload.contentId }),
-      });
-
-      if (!generateResponse.ok) {
-        throw new Error('Unable to start podcast generation.');
-      }
-
-      const generatePayload = (await generateResponse.json()) as { jobId: string };
       setPlaybackStatus('polling');
 
       for (let attempt = 0; attempt < 10; attempt += 1) {
-        const statusResponse = await fetch(`${API_BASE_URL}/status/${generatePayload.jobId}`);
-        if (!statusResponse.ok) {
-          throw new Error('Unable to check podcast status.');
-        }
-
-        const statusPayload = (await statusResponse.json()) as { status: string; error?: string };
-        if (statusPayload.status === 'completed') {
-          const podcastResponse = await fetch(`${API_BASE_URL}/podcast/${generatePayload.jobId}`);
-          if (!podcastResponse.ok) {
-            throw new Error('Unable to load the generated podcast.');
-          }
-          const podcastPayload = (await podcastResponse.json()) as { script: string; audioUrl: string };
-          setPodcastScript(podcastPayload.script);
-          setAudioUrl(podcastPayload.audioUrl);
+        const episodes = await listBriefs();
+        const completed = episodes.find((episode) => episode.status === 'completed');
+        if (completed) {
+          const detail = await getBrief(completed.id);
+          setPodcastScript(detail.script);
+          setAudioUrl(detail.audioUrl);
+          setBriefTitle(detail.subject);
           setPlaybackStatus('ready');
           return;
-        }
-
-        if (statusPayload.status === 'failed') {
-          throw new Error(statusPayload.error ?? 'The podcast generation failed.');
         }
 
         await delay(1200);
@@ -147,7 +112,7 @@ export default function TodayScreen() {
 
         <View style={styles.heroCard}>
           <Text style={styles.dateText}>{todayLabel}</Text>
-          <Text style={styles.title}>Your Morning Brief</Text>
+          <Text style={styles.title}>{briefTitle}</Text>
 
           <View style={styles.metaRow}>
             <View style={styles.metaPill}>

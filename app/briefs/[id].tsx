@@ -1,11 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
-import { briefs } from '@/data/briefs';
+import { getBrief } from '@/data/backend';
 
 const palette = {
   background: '#F8FAFC',
@@ -21,8 +21,36 @@ export default function BriefDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const [isPlaying, setIsPlaying] = useState(false);
+  const [brief, setBrief] = useState<{
+    id: string;
+    subject: string;
+    summary: string | null;
+    script: string | null;
+    status: string;
+    audioUrl: string | null;
+    createdAt: string;
+  } | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const brief = useMemo(() => briefs.find((item) => item.id === id), [id]);
+  useEffect(() => {
+    if (!id) {
+      return;
+    }
+    const loadBrief = async () => {
+      setIsLoading(true);
+      setErrorMessage(null);
+      try {
+        const detail = await getBrief(id);
+        setBrief(detail);
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : 'Unable to load brief.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    void loadBrief();
+  }, [id]);
 
   const handlePlayPress = () => {
     setIsPlaying((prev) => !prev);
@@ -32,8 +60,10 @@ export default function BriefDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.notFoundContainer}>
-          <Text style={styles.notFoundTitle}>Brief not found</Text>
-          <Text style={styles.notFoundText}>Pick another date from the explore list.</Text>
+          <Text style={styles.notFoundTitle}>{isLoading ? 'Loading brief...' : 'Brief not found'}</Text>
+          <Text style={styles.notFoundText}>
+            {errorMessage ?? 'Pick another date from the explore list.'}
+          </Text>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={18} color={palette.primaryText} />
             <Text style={styles.backButtonText}>Back</Text>
@@ -43,7 +73,12 @@ export default function BriefDetailScreen() {
     );
   }
 
-  const progressWidth = `${Math.round(brief.progressValue * 100)}%`;
+  const progressWidth = brief.status === 'completed' ? '100%' : '45%';
+  const dateLabel = new Date(brief.createdAt).toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -65,18 +100,18 @@ export default function BriefDetailScreen() {
         </View>
 
         <View style={styles.heroCard}>
-          <Text style={styles.dateText}>{brief.dateLabel}</Text>
-          <Text style={styles.title}>{brief.title}</Text>
+          <Text style={styles.dateText}>{dateLabel}</Text>
+          <Text style={styles.title}>{brief.subject}</Text>
 
           <View style={styles.metaRow}>
             <View style={styles.metaPill}>
-              <Text style={styles.metaText}>{brief.duration}</Text>
+              <Text style={styles.metaText}>{brief.status}</Text>
             </View>
             <View style={styles.metaPill}>
-              <Text style={styles.metaText}>{brief.intensity}</Text>
+              <Text style={styles.metaText}>Auto</Text>
             </View>
             <View style={styles.metaPill}>
-              <Text style={styles.metaText}>{brief.voice}</Text>
+              <Text style={styles.metaText}>Warm voice</Text>
             </View>
           </View>
 
@@ -123,8 +158,8 @@ export default function BriefDetailScreen() {
         </View>
 
         <View style={styles.summaryCard} accessibilityRole="summary">
-          <Text style={styles.summaryTitle}>About the podcast</Text>
-          <Text style={styles.summaryText}>{brief.about}</Text>
+          <Text style={styles.summaryTitle}>Script</Text>
+          <Text style={styles.summaryText}>{brief.script ?? brief.summary ?? 'Processing...'}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

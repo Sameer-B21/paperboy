@@ -1,11 +1,11 @@
-import { google } from "googleapis";
 import type { Request, Response } from "express";
+import { google } from "googleapis";
 
-import { oauthClient, gmailScopes } from "../config/googleOAuth.js";
+import { env } from "../config/env.js";
+import { gmailScopes, oauthClient } from "../config/googleOAuth.js";
 import { getOrCreateUserByEmail } from "../db/queries/users.sql.js";
 import { storeConnectionTokens } from "../services/security/tokenStore.js";
 import { toIsoDate } from "../utils/time.js";
-import { env } from "../config/env.js";
 
 export async function getGoogleAuthUrl(_req: Request, res: Response) {
   const url = oauthClient.generateAuthUrl({
@@ -50,6 +50,15 @@ export async function handleGoogleCallback(req: Request, res: Response) {
     expiresAt: toIsoDate(tokens.expiry_date ?? null),
     email,
   });
+
+  if (env.FRONTEND_URL) {
+    const redirectUrl = new URL("/settings", env.FRONTEND_URL);
+    redirectUrl.searchParams.set("userId", user.id);
+    redirectUrl.searchParams.set("email", user.email);
+    redirectUrl.searchParams.set("connected", "1");
+    res.redirect(redirectUrl.toString());
+    return;
+  }
 
   res.json({
     userId: user.id,

@@ -1,9 +1,25 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
+import {
+  fetchAuthUrl,
+  listNewsletters,
+  syncGmail,
+  updateNewsletterSelection,
+} from '@/data/backend';
+import { getUserEmail, getUserId, setUserEmail, setUserId } from '@/data/session';
 
 const palette = {
   background: '#F8FAFC',
@@ -22,70 +38,121 @@ const palette = {
 type Newsletter = {
   id: string;
   name: string;
-  description: string;
-  cadence: string;
+  sender: string;
   selected: boolean;
 };
 
-const initialNewsletters: Newsletter[] = [
-  {
-    id: 'morning-brew',
-    name: 'Morning Brew',
-    description: 'Business and markets, quick hits.',
-    cadence: 'Daily · 6:30 AM',
-    selected: true,
-  },
-  {
-    id: 'the-atlantic-daily',
-    name: 'The Atlantic Daily',
-    description: 'Culture and policy longform.',
-    cadence: 'Weekdays · 7:15 AM',
-    selected: true,
-  },
-  {
-    id: 'product-lens',
-    name: 'Product Lens',
-    description: 'Product thinking and design notes.',
-    cadence: 'Mon/Thu · 8:00 AM',
-    selected: false,
-  },
-  {
-    id: 'science-brief',
-    name: 'Science Brief',
-    description: 'Research updates and labs to watch.',
-    cadence: 'Weekly · Friday',
-    selected: false,
-  },
-  {
-    id: 'venture-weekly',
-    name: 'Venture Weekly',
-    description: 'Funding rounds and startup stories.',
-    cadence: 'Weekly · Sunday',
-    selected: true,
-  },
-];
-
 export default function SettingsScreen() {
+  const params = useLocalSearchParams<{ userId?: string; email?: string; connected?: string }>();
   const [isConnected, setIsConnected] = useState(false);
-  const [newsletters, setNewsletters] = useState<Newsletter[]>(initialNewsletters);
+  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [userEmail, setUserEmailState] = useState<string>('');
 
   const selectedCount = useMemo(
     () => newsletters.filter((newsletter) => newsletter.selected).length,
     [newsletters]
   );
 
-  const toggleNewsletter = (id: string) => {
-    setNewsletters((prev) =>
-      prev.map((newsletter) =>
-        newsletter.id === id
-          ? { ...newsletter, selected: !newsletter.selected }
-          : newsletter
-      )
-    );
+  const loadNewsletters = async () => {
+    const storedUserId = await getUserId();
+    if (!storedUserId) {
+      return;
+    }
+    setIsLoading(true);
+    setStatusMessage(null);
+    try {
+      const data = await listNewsletters();
+      setNewsletters(data);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Unable to load newsletters.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleConnectPress = () => {
-    setIsConnected(true);
+  useEffect(() => {
+    const boot = async () => {
+      const storedUserId = await getUserId();
+      const storedEmail = await getUserEmail();
+      if (storedUserId) {
+        setIsConnected(true);
+      }
+      if (storedEmail) {
+        setUserEmailState(storedEmail);
+      }
+      await loadNewsletters();
+    };
+    void boot();
+  }, []);
+
+  useEffect(() => {
+    const applyParams = async () => {
+      if (params.userId) {
+        await setUserId(params.userId);
+        setIsConnected(true);
+      }
+      if (params.email) {
+        await setUserEmail(params.email);
+        setUserEmailState(params.email);
+      }
+      if (params.userId || params.email || params.connected) {
+        await loadNewsletters();
+      }
+    };
+    void applyParams();
+  }, [params]);
+
+  const toggleNewsletter = async (id: string) => {
+    const current = newsletters.find((item) => item.id === id);
+    if (!current) {
+      return;
+    }
+    const nextSelected = !current.selected;
+    setNewsletters((prev) =>
+      prev.map((newsletter) =>
+        newsletter.id === id ? { ...newsletter, selected: nextSelected } : newsletter
+      )
+    );
+    try {
+      await updateNewsletterSelection(id, nextSelected);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Unable to update selection.');
+      setNewsletters((prev) =>
+        prev.map((newsletter) =>
+          newsletter.id === id ? { ...newsletter, selected: current.selected } : newsletter
+        )
+      );
+    }
+  };
+
+  const handleConnectPress = async () => {
+    setStatusMessage(null);
+    try {
+      const url = await fetchAuthUrl();
+      await Linking.openURL(url);
+      setStatusMessage('Complete Gmail auth, then set EXPO_PUBLIC_USER_ID and refresh.');
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Unable to start Gmail auth.');
+    }
+  };
+
+  const handleSyncPress = async () => {
+    setIsSyncing(true);
+    setIsLoading(true);
+    setStatusMessage(null);
+    try {
+      const result = await syncGmail();
+      setStatusMessage(`Sync queued ${result.queued} newsletters.`);
+      await loadNewsletters();
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Unable to sync Gmail.');
+    } finally {
+      setIsSyncing(false);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -132,15 +199,19 @@ export default function SettingsScreen() {
                   <Text style={styles.accountInitials}>TL</Text>
                 </View>
                 <View style={styles.accountMeta}>
-                  <Text style={styles.accountName}>Theo Leone</Text>
-                  <Text style={styles.accountEmail}>theo@newsletterpodcaster.com</Text>
+                  <Text style={styles.accountName}>Gmail connected</Text>
+                  <Text style={styles.accountEmail}>
+                    {userEmail || 'Signed in'}
+                  </Text>
                 </View>
                 <TouchableOpacity
                   style={styles.ghostButton}
                   activeOpacity={0.85}
                   accessibilityRole="button"
+                  onPress={handleSyncPress}
+                  disabled={isSyncing}
                 >
-                  <Text style={styles.ghostButtonText}>Manage</Text>
+                  <Text style={styles.ghostButtonText}>{isSyncing ? 'Syncing...' : 'Sync now'}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -170,25 +241,33 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.listCard}>
-          {newsletters.map((newsletter) => (
-            <View key={newsletter.id} style={styles.listRow}>
-              <View style={styles.listInfo}>
-                <Text style={styles.listTitle}>{newsletter.name}</Text>
-                <Text style={styles.listDescription}>{newsletter.description}</Text>
-                <View style={styles.cadencePill}>
-                  <Text style={styles.cadenceText}>{newsletter.cadence}</Text>
+          {isLoading ? (
+            <Text style={styles.emptyText}>Loading newsletters…</Text>
+          ) : newsletters.length === 0 ? (
+            <Text style={styles.emptyText}>No newsletters yet. Run a sync to populate.</Text>
+          ) : (
+            newsletters.map((newsletter) => (
+              <View key={newsletter.id} style={styles.listRow}>
+                <View style={styles.listInfo}>
+                  <Text style={styles.listTitle}>{newsletter.name}</Text>
+                  <Text style={styles.listDescription}>{newsletter.sender}</Text>
+                  <View style={styles.cadencePill}>
+                    <Text style={styles.cadenceText}>Auto-import enabled</Text>
+                  </View>
                 </View>
+                <Switch
+                  value={newsletter.selected}
+                  onValueChange={() => toggleNewsletter(newsletter.id)}
+                  trackColor={{ false: '#E2E8F0', true: palette.accent }}
+                  thumbColor={newsletter.selected ? '#ffffff' : '#ffffff'}
+                  ios_backgroundColor="#E2E8F0"
+                />
               </View>
-              <Switch
-                value={newsletter.selected}
-                onValueChange={() => toggleNewsletter(newsletter.id)}
-                trackColor={{ false: '#E2E8F0', true: palette.accent }}
-                thumbColor={newsletter.selected ? '#ffffff' : '#ffffff'}
-                ios_backgroundColor="#E2E8F0"
-              />
-            </View>
-          ))}
+            ))
+          )}
         </View>
+
+        {statusMessage ? <Text style={styles.statusMessage}>{statusMessage}</Text> : null}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Import rules</Text>
@@ -452,6 +531,11 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 16,
   },
+  emptyText: {
+    color: '#64748B',
+    fontSize: 13,
+    fontFamily: Fonts.sans,
+  },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -547,5 +631,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: Fonts.sans,
     fontWeight: '600',
+  },
+  statusMessage: {
+    marginTop: 12,
+    color: '#475569',
+    fontSize: 13,
+    fontFamily: Fonts.sans,
   },
 });

@@ -5,6 +5,7 @@ type EpisodeRow = {
   id: string;
   user_id: string;
   newsletter_id: string | null;
+  title: string | null;
   subject: string;
   body: string | null;
   summary: string | null;
@@ -21,7 +22,7 @@ function toEpisode(row: EpisodeRow): Episode {
     id: row.id,
     userId: row.user_id,
     newsletterId: row.newsletter_id,
-    subject: row.subject,
+    subject: row.subject ?? row.title ?? "Untitled",
     body: row.body,
     summary: row.summary,
     script: row.script,
@@ -46,6 +47,7 @@ export async function createEpisode(payload: {
     .insert({
       user_id: payload.userId,
       newsletter_id: payload.newsletterId,
+      title: payload.subject,
       subject: payload.subject,
       body: payload.body ?? null,
       status: "queued",
