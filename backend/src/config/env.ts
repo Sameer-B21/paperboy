@@ -1,6 +1,7 @@
-import dotenv from "dotenv";
+// import dotenv from "dotenv";
 
-dotenv.config();
+// dotenv.config();
+import 'dotenv/config';
 
 export type Env = {
   NODE_ENV: string;

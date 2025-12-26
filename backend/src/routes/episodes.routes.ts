@@ -1,9 +1,9 @@
 import { Router } from "express";
 
-import { getBrief, getBriefAudio, listBriefs } from "../controllers/briefs.controller.js";
+import { getBrief, getBriefAudio, listBriefs } from "../controllers/episodes.controller.js";
 
-export const briefsRouter = Router();
+export const episodesRouter = Router();
 
-briefsRouter.get("/", listBriefs);
-briefsRouter.get("/:episodeId", getBrief);
-briefsRouter.get("/:episodeId/audio", getBriefAudio);
+episodesRouter.get("/", listBriefs);
+episodesRouter.get("/:episodeId", getBrief);
+episodesRouter.get("/:episodeId/audio", getBriefAudio);
