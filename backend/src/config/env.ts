@@ -1,8 +1,9 @@
 import dotenv from "dotenv";
 
 dotenv.config();
-// import 'dotenv/config';
 
+
+//env parameters
 export type Env = {
   NODE_ENV: string;
   PORT: number;
@@ -19,6 +20,7 @@ export type Env = {
   FRONTEND_URL?: string;
 };
 
+//function that forcess specific environment variables to exist and returns value
 function requireEnv(key: string): string {
   const value = process.env[key];
   if (!value) {
@@ -27,6 +29,7 @@ function requireEnv(key: string): string {
   return value;
 }
 
+//variable that holds all environment variables
 export const env: Env = {
   NODE_ENV: process.env.NODE_ENV ?? "development",
   PORT: Number.parseInt(process.env.PORT ?? "3001", 10),

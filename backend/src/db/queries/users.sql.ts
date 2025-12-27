@@ -1,6 +1,7 @@
 import { supabase } from "../../config/supabase.js";
 import type { User } from "../types.js";
 
+// Defines the shape of a user row in the database
 type UserRow = {
   id: string;
   email: string;
@@ -8,6 +9,7 @@ type UserRow = {
   created_at: string;
 };
 
+// Converts a database row to a User object
 function toUser(row: UserRow): User {
   return {
     id: row.id,
@@ -17,6 +19,7 @@ function toUser(row: UserRow): User {
   };
 }
 
+// Retrieves a user by their ID
 export async function getUserById(userId: string): Promise<User | null> {
   const { data, error } = await supabase.from("users").select("*").eq("id", userId).maybeSingle();
   if (error) {
@@ -25,6 +28,7 @@ export async function getUserById(userId: string): Promise<User | null> {
   return data ? toUser(data as UserRow) : null;
 }
 
+// Retrieves a user by their email, or creates one if not found
 export async function getOrCreateUserByEmail(
   email: string,
   name: string | null
@@ -47,6 +51,7 @@ export async function getOrCreateUserByEmail(
   return toUser(inserted as UserRow);
 }
 
+// Lists all users in the database
 export async function listUsers(): Promise<User[]> {
   const { data, error } = await supabase.from("users").select("*").order("created_at");
   if (error) {

@@ -1,6 +1,7 @@
 import { supabase } from "../../config/supabase.js";
 import type { Connection } from "../types.js";
 
+// Defines the shape of a connection row in the database
 type ConnectionRow = {
   id: string;
   user_id: string;
@@ -14,6 +15,7 @@ type ConnectionRow = {
   updated_at: string;
 };
 
+// Converts a database row to a Connection object
 function toConnection(row: ConnectionRow): Connection {
   return {
     id: row.id,
@@ -29,6 +31,7 @@ function toConnection(row: ConnectionRow): Connection {
   };
 }
 
+// Retrieves a connection for a specific user and provider
 export async function getConnectionByUser(
   userId: string,
   provider: Connection["provider"] = "gmail"
@@ -45,6 +48,7 @@ export async function getConnectionByUser(
   return data ? toConnection(data as ConnectionRow) : null;
 }
 
+// Upserts (inserts or updates) a connection record in the database
 export async function upsertConnection(payload: {
   userId: string;
   provider: Connection["provider"];

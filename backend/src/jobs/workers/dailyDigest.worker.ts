@@ -1,6 +1,7 @@
 import {
   createEpisode,
   getEpisodeBySourceMessageId,
+  listEpisodesSince,
   listEpisodesForDay,
   updateEpisode,
 } from "../../db/queries/episodes.sql.js";
@@ -11,6 +12,7 @@ import { buildDailyDigestScript } from "../../services/summarize/chatgptDigest.j
 import { generateAudio } from "../../services/tts/generateAudio.js";
 import { logger } from "../../utils/logger.js";
 
+//outputs date in a standard format for the digest title
 function formatDateLabel(date: Date): string {
   return date.toLocaleDateString(undefined, {
     weekday: "long",
@@ -19,37 +21,51 @@ function formatDateLabel(date: Date): string {
   });
 }
 
+//function to run daily digest for a single user
 export async function runDailyDigestForUser(
   userId: string,
-  now = new Date()
-): Promise<void> {
+  now = new Date(),
+  options: { force?: boolean } = {}
+): Promise<string | null> {
+  // Determine time window (daily schedule uses calendar day, manual uses last 24 hours)
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(startOfDay);
   endOfDay.setDate(endOfDay.getDate() + 1);
+  const windowStart = options.force ? new Date(now.getTime() - 24 * 60 * 60 * 1000) : startOfDay;
+  const windowEnd = options.force ? now : endOfDay;
 
+  //set datelabel and keys
   const dayKey = startOfDay.toISOString().slice(0, 10);
-  const dateLabel = formatDateLabel(startOfDay);
+  const dateLabel = formatDateLabel(windowEnd);
 
-  const digestKey = `digest-${dayKey}`;
-  const existing = await getEpisodeBySourceMessageId(userId, digestKey);
-  if (existing) {
-    return;
+  // Check if digest already exists
+  const digestKey = options.force ? `digest-${dayKey}-${now.getTime()}` : `digest-${dayKey}`;
+  if (!options.force) {
+    const existing = await getEpisodeBySourceMessageId(userId, digestKey);
+    if (existing) {
+      return null;
+    }
   }
 
-  const episodes = await listEpisodesForDay(
-    userId,
-    startOfDay.toISOString(),
-    endOfDay.toISOString()
-  );
+  // Fetch episodes for the day
+  const episodes = options.force
+    ? await listEpisodesSince(userId, windowStart.toISOString())
+    : await listEpisodesForDay(
+        userId,
+        startOfDay.toISOString(),
+        endOfDay.toISOString()
+      );
   if (episodes.length === 0) {
-    return;
+    return null;
   }
-  console.log("Found episodes for digest", { userId, dayKey, count: episodes.length });
+  // console.log("Found episodes for digest", { userId, dayKey, count: episodes.length });
 
+  // Fetch newsletters and map by ID
   const newsletters = await listNewsletters(userId);
   const newsletterMap = new Map(newsletters.map((newsletter) => [newsletter.id, newsletter]));
 
+  // Group episodes by newsletter
   const grouped = new Map<string, string[]>();
   episodes.forEach((episode) => {
     const key = episode.newsletterId ?? "unknown";
@@ -59,8 +75,9 @@ export async function runDailyDigestForUser(
     }
     grouped.set(key, next);
   });
-  console.log("Grouped episodes for digest", { userId, dayKey, groups: grouped.size });
+  // console.log("Grouped episodes for digest", { userId, dayKey, groups: grouped.size });
 
+  // Prepare items for the digest
   const items = Array.from(grouped.entries())
     .map(([newsletterId, bodies]) => {
       const newsletter = newsletterMap.get(newsletterId);
@@ -73,9 +90,10 @@ export async function runDailyDigestForUser(
     .filter((item) => item.body.trim().length > 0);
 
   if (items.length === 0) {
-    return;
+    return null;
   }
 
+  // Create the digest episode by combining all items
   const combinedBody = items.map((item) => `${item.subject}\n${item.body}`).join("\n\n");
   const digestEpisode = await createEpisode({
     userId,
@@ -86,17 +104,22 @@ export async function runDailyDigestForUser(
   });
 
   try {
+    // Build the daily digest script
     const { summary, script } = await buildDailyDigestScript({ dateLabel, items });
     await updateEpisode(digestEpisode.id, { summary, script });
 
+    // Generate audio and upload
     const audioPath = await uploadAudio(digestEpisode.id, generateAudio(script));
     await updateEpisode(digestEpisode.id, { audioPath, status: "completed" });
   } catch (error) {
     logger.error("Daily digest failed", { error });
     await updateEpisode(digestEpisode.id, { status: "failed" });
   }
+
+  return digestEpisode.id;
 }
 
+//function to run daily digest for all users
 export async function runDailyDigestForAllUsers(now = new Date()): Promise<void> {
   const users = await listUsers();
   if (users.length === 0) {

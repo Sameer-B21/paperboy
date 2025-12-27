@@ -29,6 +29,7 @@ export default function EpisodeDetailScreen() {
     status: string;
     audioUrl: string | null;
     createdAt: string;
+    progressLabel?: string;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);

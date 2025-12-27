@@ -1,6 +1,7 @@
 import { supabase } from "../../config/supabase.js";
 import type { Episode } from "../types.js";
 
+// Defines the shape of an episode row in the database
 type EpisodeRow = {
   id: string;
   user_id: string;
@@ -17,6 +18,7 @@ type EpisodeRow = {
   updated_at: string;
 };
 
+// Converts a database row to an Episode object
 function toEpisode(row: EpisodeRow): Episode {
   return {
     id: row.id,
@@ -34,6 +36,7 @@ function toEpisode(row: EpisodeRow): Episode {
   };
 }
 
+// Creates a new episode record in the database
 export async function createEpisode(payload: {
   userId: string;
   newsletterId: string | null;
@@ -63,19 +66,36 @@ export async function createEpisode(payload: {
   return toEpisode(data as EpisodeRow);
 }
 
+// Updates an existing episode record in the database
 export async function updateEpisode(
   episodeId: string,
   updates: Partial<Pick<Episode, "summary" | "script" | "audioPath" | "status">>
 ): Promise<Episode> {
+  const updatePayload: {
+    summary?: string | null;
+    script?: string | null;
+    audio_path?: string | null;
+    status?: Episode["status"];
+    updated_at: string;
+  } = {
+    updated_at: new Date().toISOString(),
+  };
+  if (updates.summary !== undefined) {
+    updatePayload.summary = updates.summary;
+  }
+  if (updates.script !== undefined) {
+    updatePayload.script = updates.script;
+  }
+  if (updates.audioPath !== undefined) {
+    updatePayload.audio_path = updates.audioPath;
+  }
+  if (updates.status !== undefined) {
+    updatePayload.status = updates.status;
+  }
+
   const { data, error } = await supabase
     .from("episodes")
-    .update({
-      summary: updates.summary,
-      script: updates.script,
-      audio_path: updates.audioPath,
-      status: updates.status,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("id", episodeId)
     .select("*")
     .single();
@@ -85,6 +105,7 @@ export async function updateEpisode(
   return toEpisode(data as EpisodeRow);
 }
 
+// Lists all episodes for a specific user
 export async function listEpisodes(userId: string): Promise<Episode[]> {
   const { data, error } = await supabase
     .from("episodes")
@@ -97,6 +118,7 @@ export async function listEpisodes(userId: string): Promise<Episode[]> {
   return (data ?? []).map((row) => toEpisode(row as EpisodeRow));
 }
 
+// Retrieves a specific episode by its ID
 export async function getEpisode(episodeId: string): Promise<Episode | null> {
   const { data, error } = await supabase.from("episodes").select("*").eq("id", episodeId).maybeSingle();
   if (error) {
@@ -105,6 +127,7 @@ export async function getEpisode(episodeId: string): Promise<Episode | null> {
   return data ? toEpisode(data as EpisodeRow) : null;
 }
 
+// Lists episodes created since a specific ISO date for a user
 export async function listEpisodesSince(
   userId: string,
   sinceIso: string
@@ -122,6 +145,7 @@ export async function listEpisodesSince(
   return (data ?? []).map((row) => toEpisode(row as EpisodeRow));
 }
 
+// Lists episodes for a specific day for a user
 export async function listEpisodesForDay(
   userId: string,
   startIso: string,
@@ -141,6 +165,7 @@ export async function listEpisodesForDay(
   return (data ?? []).map((row) => toEpisode(row as EpisodeRow));
 }
 
+// Retrieves an episode by its source message ID for a user
 export async function getEpisodeBySourceMessageId(
   userId: string,
   sourceMessageId: string
@@ -157,6 +182,7 @@ export async function getEpisodeBySourceMessageId(
   return data ? toEpisode(data as EpisodeRow) : null;
 }
 
+// Retrieves the latest daily digest episode for a user
 export async function getLatestDailyDigest(userId: string): Promise<Episode | null> {
   const { data, error } = await supabase
     .from("episodes")

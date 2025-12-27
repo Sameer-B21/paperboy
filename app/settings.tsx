@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Linking,
@@ -45,6 +45,7 @@ type Newsletter = {
 
 export default function SettingsScreen() {
   const params = useLocalSearchParams<{ userId?: string; email?: string; connected?: string }>();
+  const router = useRouter();
   const [isConnected, setIsConnected] = useState(false);
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -180,6 +181,7 @@ export default function SettingsScreen() {
     try {
       await generateDailyEpisode();
       setStatusMessage('Daily brief queued. Check Today in a moment.');
+      router.push('/today');
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : 'Unable to generate daily brief.');
     } finally {
@@ -346,7 +348,7 @@ export default function SettingsScreen() {
           >
             <Ionicons name="play-circle" size={18} color="#0B1F3A" />
             <Text style={styles.connectButtonText}>
-              {isGenerating ? 'Generating...' : 'Generate today’s brief'}
+              {isGenerating ? 'Generating...' : 'Generate new daily digest'}
             </Text>
           </TouchableOpacity>
         </View>

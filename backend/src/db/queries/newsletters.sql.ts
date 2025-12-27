@@ -1,6 +1,7 @@
 import { supabase } from "../../config/supabase.js";
 import type { Newsletter } from "../types.js";
 
+// Defines the shape of a newsletter row in the database
 type NewsletterRow = {
   id: string;
   user_id: string;
@@ -11,6 +12,7 @@ type NewsletterRow = {
   updated_at: string;
 };
 
+// Converts a database row to a Newsletter object
 function toNewsletter(row: NewsletterRow): Newsletter {
   return {
     id: row.id,
@@ -23,6 +25,7 @@ function toNewsletter(row: NewsletterRow): Newsletter {
   };
 }
 
+// Lists newsletters for a specific user
 export async function listNewsletters(userId: string): Promise<Newsletter[]> {
   const { data, error } = await supabase
     .from("newsletters")
@@ -35,6 +38,7 @@ export async function listNewsletters(userId: string): Promise<Newsletter[]> {
   return (data ?? []).map((row) => toNewsletter(row as NewsletterRow));
 }
 
+// Upserts (inserts or updates) a newsletter record in the database
 export async function upsertNewsletter(payload: {
   userId: string;
   name: string;
@@ -61,6 +65,7 @@ export async function upsertNewsletter(payload: {
   return toNewsletter(data as NewsletterRow);
 }
 
+// Updates the selection status of a newsletter for a specific user
 export async function updateNewsletterSelection(
   userId: string,
   newsletterId: string,
