@@ -97,9 +97,9 @@ export async function updateNewsletterSelection(
   return payload.newsletter;
 }
 
-export async function listBriefs(): Promise<EpisodeListItem[]> {
+export async function listEpisodes(): Promise<EpisodeListItem[]> {
   await requireUserId();
-  const response = await fetch(`${API_BASE_URL}/briefs`, {
+  const response = await fetch(`${API_BASE_URL}/episodes`, {
     headers: await buildHeaders(false),
   });
   if (!response.ok) {
@@ -109,9 +109,9 @@ export async function listBriefs(): Promise<EpisodeListItem[]> {
   return payload.episodes ?? [];
 }
 
-export async function getBrief(episodeId: string): Promise<EpisodeDetail> {
+export async function getEpisode(episodeId: string): Promise<EpisodeDetail> {
   await requireUserId();
-  const response = await fetch(`${API_BASE_URL}/briefs/${episodeId}`, {
+  const response = await fetch(`${API_BASE_URL}/episodes/${episodeId}`, {
     headers: await buildHeaders(false),
   });
   if (!response.ok) {
@@ -120,9 +120,9 @@ export async function getBrief(episodeId: string): Promise<EpisodeDetail> {
   return (await response.json()) as EpisodeDetail;
 }
 
-export async function generateDailyBrief(): Promise<EpisodeDetail | null> {
+export async function generateDailyEpisode(): Promise<EpisodeDetail | null> {
   await requireUserId();
-  const response = await fetch(`${API_BASE_URL}/briefs/daily`, {
+  const response = await fetch(`${API_BASE_URL}/episodes/daily`, {
     method: 'POST',
     headers: await buildHeaders(true),
   });
@@ -135,9 +135,9 @@ export async function generateDailyBrief(): Promise<EpisodeDetail | null> {
   return (await response.json()) as EpisodeDetail;
 }
 
-export async function getLatestDailyBrief(): Promise<EpisodeDetail | null> {
+export async function getLatestDailyEpisode(): Promise<EpisodeDetail | null> {
   await requireUserId();
-  const response = await fetch(`${API_BASE_URL}/briefs/daily/latest`, {
+  const response = await fetch(`${API_BASE_URL}/episodes/daily/latest`, {
     headers: await buildHeaders(false),
   });
   if (response.status === 404) {

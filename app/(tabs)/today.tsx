@@ -5,7 +5,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
-import { getLatestDailyBrief } from '@/data/backend';
+import { getLatestDailyEpisode } from '@/data/backend';
 
 const palette = {
   background: '#F8FAFC',
@@ -26,7 +26,7 @@ export default function TodayScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [podcastScript, setPodcastScript] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [briefTitle, setBriefTitle] = useState<string>('Your Morning Brief');
+  const [episodeTitle, setEpisodeTitle] = useState<string>('Your Morning Brief');
 
   const isBusy = playbackStatus === 'ingesting' || playbackStatus === 'generating' || playbackStatus === 'polling';
   const statusText = useMemo(() => {
@@ -52,29 +52,29 @@ export default function TodayScreen() {
       return;
     }
     if (playbackStatus !== 'ready') {
-      await loadDailyBrief();
+      await loadDailyEpisode();
       return;
     }
     setIsPlaying((prev) => !prev);
   };
 
-  const loadDailyBrief = async () => {
+  const loadDailyEpisode = async () => {
     setErrorMessage(null);
     setPlaybackStatus('ingesting');
 
     try {
-      const digest = await getLatestDailyBrief();
+      const digest = await getLatestDailyEpisode();
       if (!digest) {
         setPlaybackStatus('idle');
         setPodcastScript(null);
         setAudioUrl(null);
-        setBriefTitle('Your Morning Brief');
+        setEpisodeTitle('Your Morning Brief');
         setErrorMessage('No daily brief yet. Check back after 7am.');
         return;
       }
       setPodcastScript(digest.script);
       setAudioUrl(digest.audioUrl);
-      setBriefTitle(digest.subject);
+      setEpisodeTitle(digest.subject);
       setPlaybackStatus('ready');
     } catch (error) {
       setPlaybackStatus('error');
@@ -83,7 +83,7 @@ export default function TodayScreen() {
   };
 
   useEffect(() => {
-    void loadDailyBrief();
+    void loadDailyEpisode();
   }, []);
   
   const todayLabel = new Date().toLocaleDateString(undefined, {
@@ -113,7 +113,7 @@ export default function TodayScreen() {
 
         <View style={styles.heroCard}>
           <Text style={styles.dateText}>{todayLabel}</Text>
-          <Text style={styles.title}>{briefTitle}</Text>
+          <Text style={styles.title}>{episodeTitle}</Text>
 
           <View style={styles.metaRow}>
             <View style={styles.metaPill}>

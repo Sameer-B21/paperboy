@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Fonts } from '@/constants/theme';
 import {
   fetchAuthUrl,
-  generateDailyBrief,
+  generateDailyEpisode,
   listNewsletters,
   syncGmail,
   updateNewsletterSelection,
@@ -174,11 +174,11 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleGenerateBrief = async () => {
+  const handleGenerateEpisode = async () => {
     setIsGenerating(true);
     setStatusMessage(null);
     try {
-      await generateDailyBrief();
+      await generateDailyEpisode();
       setStatusMessage('Daily brief queued. Check Today in a moment.');
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : 'Unable to generate daily brief.');
@@ -341,7 +341,7 @@ export default function SettingsScreen() {
             style={styles.connectButton}
             activeOpacity={0.85}
             accessibilityRole="button"
-            onPress={handleGenerateBrief}
+            onPress={handleGenerateEpisode}
             disabled={isGenerating || selectedCount === 0}
           >
             <Ionicons name="play-circle" size={18} color="#0B1F3A" />

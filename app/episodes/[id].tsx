@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
-import { getBrief } from '@/data/backend';
+import { getEpisode } from '@/data/backend';
 
 const palette = {
   background: '#F8FAFC',
@@ -17,11 +17,11 @@ const palette = {
   pill: '#EEF2F6',
 };
 
-export default function BriefDetailScreen() {
+export default function EpisodeDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const [isPlaying, setIsPlaying] = useState(false);
-  const [brief, setBrief] = useState<{
+  const [episode, setEpisode] = useState<{
     id: string;
     subject: string;
     summary: string | null;
@@ -37,26 +37,26 @@ export default function BriefDetailScreen() {
     if (!id) {
       return;
     }
-    const loadBrief = async () => {
+    const loadEpisode = async () => {
       setIsLoading(true);
       setErrorMessage(null);
       try {
-        const detail = await getBrief(id);
-        setBrief(detail);
+        const detail = await getEpisode(id);
+        setEpisode(detail);
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : 'Unable to load brief.');
       } finally {
         setIsLoading(false);
       }
     };
-    void loadBrief();
+    void loadEpisode();
   }, [id]);
 
   const handlePlayPress = () => {
     setIsPlaying((prev) => !prev);
   };
 
-  if (!brief) {
+  if (!episode) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.notFoundContainer}>
@@ -73,8 +73,8 @@ export default function BriefDetailScreen() {
     );
   }
 
-  const progressWidth = brief.status === 'completed' ? '100%' : '45%';
-  const dateLabel = new Date(brief.createdAt).toLocaleDateString(undefined, {
+  const progressWidth = episode.status === 'completed' ? '100%' : '45%';
+  const dateLabel = new Date(episode.createdAt).toLocaleDateString(undefined, {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
@@ -101,11 +101,11 @@ export default function BriefDetailScreen() {
 
         <View style={styles.heroCard}>
           <Text style={styles.dateText}>{dateLabel}</Text>
-          <Text style={styles.title}>{brief.subject}</Text>
+          <Text style={styles.title}>{episode.subject}</Text>
 
           <View style={styles.metaRow}>
             <View style={styles.metaPill}>
-              <Text style={styles.metaText}>{brief.status}</Text>
+              <Text style={styles.metaText}>{episode.status}</Text>
             </View>
             <View style={styles.metaPill}>
               <Text style={styles.metaText}>Auto</Text>
@@ -153,13 +153,13 @@ export default function BriefDetailScreen() {
             <View style={styles.progressBar}>
               <View style={[styles.progressFill, {width: `${parseFloat(progressWidth)}%` || 0 }]} />
             </View>
-            <Text style={styles.progressLabel}>{brief.progressLabel}</Text>
+            <Text style={styles.progressLabel}>{episode.progressLabel}</Text>
           </View>
         </View>
 
         <View style={styles.summaryCard} accessibilityRole="summary">
           <Text style={styles.summaryTitle}>Script</Text>
-          <Text style={styles.summaryText}>{brief.script ?? brief.summary ?? 'Processing...'}</Text>
+          <Text style={styles.summaryText}>{episode.script ?? episode.summary ?? 'Processing...'}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

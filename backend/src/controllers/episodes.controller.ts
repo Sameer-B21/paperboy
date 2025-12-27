@@ -1,6 +1,11 @@
 import type { Request, Response } from "express";
 
-import { getEpisode, getLatestDailyDigest, listEpisodes } from "../db/queries/episodes.sql.js";
+import {
+  getEpisode as getEpisodeById,
+  getEpisodeBySourceMessageId,
+  getLatestDailyDigest,
+  listEpisodes as listEpisodesByUser,
+} from "../db/queries/episodes.sql.js";
 import { downloadAudio } from "../services/storage/uploadAudio.js";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/errors.js";
@@ -14,9 +19,9 @@ function readUserId(req: Request): string {
   return userId;
 }
 
-export async function listBriefs(req: Request, res: Response) {
+export async function listEpisodes(req: Request, res: Response) {
   const userId = readUserId(req);
-  const episodes = await listEpisodes(userId);
+  const episodes = await listEpisodesByUser(userId);
   const payload = episodes.map((episode) => ({
     id: episode.id,
     subject: episode.subject,
@@ -26,9 +31,9 @@ export async function listBriefs(req: Request, res: Response) {
   res.json({ episodes: payload });
 }
 
-export async function getBrief(req: Request, res: Response) {
+export async function getEpisode(req: Request, res: Response) {
   readUserId(req);
-  const episode = await getEpisode(req.params.episodeId);
+  const episode = await getEpisodeById(req.params.episodeId);
   if (!episode) {
     res.status(404).json({ error: "Episode not found." });
     return;
@@ -39,14 +44,14 @@ export async function getBrief(req: Request, res: Response) {
     summary: episode.summary,
     script: episode.script,
     status: episode.status,
-    audioUrl: episode.audioPath ? `${env.BASE_URL}/briefs/${episode.id}/audio` : null,
+    audioUrl: episode.audioPath ? `${env.BASE_URL}/episodes/${episode.id}/audio` : null,
     createdAt: episode.createdAt,
   });
 }
 
-export async function getBriefAudio(req: Request, res: Response) {
+export async function getEpisodeAudio(req: Request, res: Response) {
   readUserId(req);
-  const episode = await getEpisode(req.params.episodeId);
+  const episode = await getEpisodeById(req.params.episodeId);
   if (!episode || !episode.audioPath) {
     res.status(404).json({ error: "Audio not found." });
     return;
@@ -56,30 +61,33 @@ export async function getBriefAudio(req: Request, res: Response) {
   res.send(audio.data);
 }
 
-export async function generateDailyBrief(req: Request, res: Response) {
+export async function generateDailyEpisode(req: Request, res: Response) {
   const userId = readUserId(req);
-  const digest = await runDailyDigestForUser(userId);
-  if (!digest) {
-    res.status(204).json({ status: "empty" });
-    return;
-  }
-  const episode = await getEpisode(digest.id);
+  const now = new Date();
+  await runDailyDigestForUser(userId, now);
+
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+  const dayKey = startOfDay.toISOString().slice(0, 10);
+  const digestKey = `digest-${dayKey}`;
+
+  const episode = await getEpisodeBySourceMessageId(userId, digestKey);
   if (!episode) {
-    res.status(404).json({ error: "Daily brief not found." });
+    res.status(204).send();
     return;
   }
+
   res.json({
     id: episode.id,
     subject: episode.subject,
     summary: episode.summary,
     script: episode.script,
     status: episode.status,
-    audioUrl: episode.audioPath ? `${env.BASE_URL}/briefs/${episode.id}/audio` : null,
+    audioUrl: episode.audioPath ? `${env.BASE_URL}/episodes/${episode.id}/audio` : null,
     createdAt: episode.createdAt,
   });
 }
-
-export async function getLatestDailyBrief(req: Request, res: Response) {
+export async function getLatestDailyEpisode(req: Request, res: Response) {
   const userId = readUserId(req);
   const episode = await getLatestDailyDigest(userId);
   if (!episode) {
@@ -92,7 +100,7 @@ export async function getLatestDailyBrief(req: Request, res: Response) {
     summary: episode.summary,
     script: episode.script,
     status: episode.status,
-    audioUrl: episode.audioPath ? `${env.BASE_URL}/briefs/${episode.id}/audio` : null,
+    audioUrl: episode.audioPath ? `${env.BASE_URL}/episodes/${episode.id}/audio` : null,
     createdAt: episode.createdAt,
   });
 }

@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
-import { listBriefs } from '@/data/backend';
+import { listEpisodes } from '@/data/backend';
 
 const palette = {
   background: '#F8FAFC',
@@ -20,7 +20,7 @@ const palette = {
 
 export default function ExploreScreen() {
   const router = useRouter();
-  const [briefs, setBriefs] = useState<
+  const [episodes, setEpisodes] = useState<
     Array<{
       id: string;
       dateLabel: string;
@@ -31,10 +31,10 @@ export default function ExploreScreen() {
   >([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const loadBriefs = async () => {
+  const loadEpisodes = async () => {
     setIsLoading(true);
     try {
-      const episodes = await listBriefs();
+      const episodes = await listEpisodes();
       const todayKey = new Date().toDateString();
       const mapped = episodes.map((episode) => ({
         id: episode.id,
@@ -53,16 +53,16 @@ export default function ExploreScreen() {
       const pastOnly = mapped.filter(
         (episode) => new Date(episode.createdAt).toDateString() !== todayKey
       );
-      setBriefs(pastOnly);
+      setEpisodes(pastOnly);
     } catch {
-      setBriefs([]);
+      setEpisodes([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadBriefs();
+    void loadEpisodes();
   }, []);
 
   return (
@@ -98,7 +98,7 @@ export default function ExploreScreen() {
         <View style={styles.listHeader}>
           <Text style={styles.listTitle}>Past daily briefs</Text>
           <View style={styles.metaPill}>
-            <Text style={styles.metaText}>{briefs.length} saved</Text>
+            <Text style={styles.metaText}>{episodes.length} saved</Text>
           </View>
         </View>
         
@@ -106,25 +106,25 @@ export default function ExploreScreen() {
         {isLoading ? (
           <Text style={styles.summaryText}>Loading briefs...</Text>
         ) : (
-          briefs.map((brief) => (
+          episodes.map((episode) => (
           <Link
-            key={brief.id}
-            href={{ pathname: '/briefs/[id]', params: { id: brief.id } }}
+            key={episode.id}
+            href={{ pathname: '/episodes/[id]', params: { id: episode.id } }}
             asChild
           >
             <TouchableOpacity
-              style={styles.briefCard}
+              style={styles.episodeCard}
               activeOpacity={0.85}
               accessibilityRole="button"
             >
-              <View style={styles.briefHeader}>
-                <Text style={styles.briefDate}>{brief.dateLabel}</Text>
+              <View style={styles.episodeHeader}>
+                <Text style={styles.episodeDate}>{episode.dateLabel}</Text>
                 <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
               </View>
-              <Text style={styles.briefTitle}>{brief.title}</Text>
+              <Text style={styles.episodeTitle}>{episode.title}</Text>
               <View style={styles.metaRow}>
                 <View style={styles.metaPill}>
-                  <Text style={styles.metaText}>{brief.status}</Text>
+                  <Text style={styles.metaText}>{episode.status}</Text>
                 </View>
                 <View style={styles.metaPill}>
                   <Text style={styles.metaText}>Auto</Text>
@@ -133,7 +133,7 @@ export default function ExploreScreen() {
                   <Text style={styles.metaText}>Warm voice</Text>
                 </View>
               </View>
-              <Text style={styles.briefSummary}>{brief.summary}</Text>
+              <Text style={styles.episodeSummary}>{episode.summary}</Text>
             </TouchableOpacity>
           </Link>
           ))
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontFamily: Fonts.sans,
   },
-  briefCard: {
+  episodeCard: {
     backgroundColor: palette.card,
     borderRadius: 18,
     padding: 20,
@@ -245,25 +245,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.border,
   },
-  briefHeader: {
+  episodeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 6,
   },
-  briefDate: {
+  episodeDate: {
     color: palette.secondaryText,
     fontSize: 14,
     fontFamily: Fonts.sans,
   },
-  briefTitle: {
+  episodeTitle: {
     color: palette.primaryText,
     fontSize: 20,
     fontFamily: Fonts.sans,
     fontWeight: '600',
     marginBottom: 10,
   },
-  briefSummary: {
+  episodeSummary: {
     color: '#475569',
     fontSize: 15,
     lineHeight: 22,

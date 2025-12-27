@@ -34,7 +34,7 @@ export async function discoverNewslettersForUser(userId: string): Promise<number
 
   const messageIds = response.data.messages ?? [];
   if (messageIds.length === 0) {
-    return [];
+    return 0;
   }
 
   const existingNewsletters = await listNewsletters(userId);

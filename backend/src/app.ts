@@ -19,7 +19,7 @@ export function createApp() {
 
   app.use("/auth", authRouter);
   app.use("/gmail", gmailRouter);
-  app.use("/briefs", episodesRouter);
+  app.use("/episodes", episodesRouter);
   app.use("/webhooks", webhooksRouter);
 
   app.use((req, res) => {

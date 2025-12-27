@@ -1,17 +1,17 @@
 import { Router } from "express";
 
 import {
-  generateDailyBrief,
-  getLatestDailyBrief,
-  getBrief,
-  getBriefAudio,
-  listBriefs,
+  generateDailyEpisode,
+  getLatestDailyEpisode,
+  getEpisode,
+  getEpisodeAudio,
+  listEpisodes,
 } from "../controllers/episodes.controller.js";
 
 export const episodesRouter = Router();
 
-episodesRouter.get("/", listBriefs);
-episodesRouter.post("/daily", generateDailyBrief);
-episodesRouter.get("/daily/latest", getLatestDailyBrief);
-episodesRouter.get("/:episodeId", getBrief);
-episodesRouter.get("/:episodeId/audio", getBriefAudio);
+episodesRouter.get("/", listEpisodes);
+episodesRouter.post("/daily", generateDailyEpisode);
+episodesRouter.get("/daily/latest", getLatestDailyEpisode);
+episodesRouter.get("/:episodeId", getEpisode);
+episodesRouter.get("/:episodeId/audio", getEpisodeAudio);

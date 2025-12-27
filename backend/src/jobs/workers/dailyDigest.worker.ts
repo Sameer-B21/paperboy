@@ -4,12 +4,12 @@ import {
   listEpisodesForDay,
   updateEpisode,
 } from "../../db/queries/episodes.sql.js";
+import { listNewsletters } from "../../db/queries/newsletters.sql.js";
 import { listUsers } from "../../db/queries/users.sql.js";
 import { uploadAudio } from "../../services/storage/uploadAudio.js";
 import { buildDailyDigestScript } from "../../services/summarize/chatgptDigest.js";
 import { generateAudio } from "../../services/tts/generateAudio.js";
 import { logger } from "../../utils/logger.js";
-import type { Episode } from "../../db/types.js";
 
 function formatDateLabel(date: Date): string {
   return date.toLocaleDateString(undefined, {
@@ -22,23 +22,20 @@ function formatDateLabel(date: Date): string {
 export async function runDailyDigestForUser(
   userId: string,
   now = new Date()
-): Promise<Episode | null> {
+): Promise<void> {
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(startOfDay);
   endOfDay.setDate(endOfDay.getDate() + 1);
-  console.log("Running daily digest", { userId, startOfDay, endOfDay });
 
   const dayKey = startOfDay.toISOString().slice(0, 10);
   const dateLabel = formatDateLabel(startOfDay);
 
   const digestKey = `digest-${dayKey}`;
   const existing = await getEpisodeBySourceMessageId(userId, digestKey);
-  console.log("Checked for existing digest", { userId, dayKey, exists: !!existing });
   if (existing) {
-    return existing;
+    return;
   }
-  console.log("Generating daily digest", { userId, dayKey });
 
   const episodes = await listEpisodesForDay(
     userId,
@@ -46,24 +43,37 @@ export async function runDailyDigestForUser(
     endOfDay.toISOString()
   );
   if (episodes.length === 0) {
-    return null;
+    return;
   }
   console.log("Found episodes for digest", { userId, dayKey, count: episodes.length });
 
-  const combinedBodies = episodes
-    .map((episode) => episode.body ?? "")
-    .filter((body) => body.trim().length > 0)
-    .join("\n\n");
+  const newsletters = await listNewsletters(userId);
+  const newsletterMap = new Map(newsletters.map((newsletter) => [newsletter.id, newsletter]));
 
-  const items = [
-    {
-      subject: "All newsletters",
-      body: combinedBodies,
-    },
-  ].filter((item) => item.body.trim().length > 0);
+  const grouped = new Map<string, string[]>();
+  episodes.forEach((episode) => {
+    const key = episode.newsletterId ?? "unknown";
+    const next = grouped.get(key) ?? [];
+    if (episode.body) {
+      next.push(episode.body);
+    }
+    grouped.set(key, next);
+  });
+  console.log("Grouped episodes for digest", { userId, dayKey, groups: grouped.size });
+
+  const items = Array.from(grouped.entries())
+    .map(([newsletterId, bodies]) => {
+      const newsletter = newsletterMap.get(newsletterId);
+      const label = newsletter?.name ?? newsletter?.sender ?? "Newsletter";
+      return {
+        subject: label,
+        body: bodies.join("\n\n"),
+      };
+    })
+    .filter((item) => item.body.trim().length > 0);
 
   if (items.length === 0) {
-    return null;
+    return;
   }
 
   const combinedBody = items.map((item) => `${item.subject}\n${item.body}`).join("\n\n");
@@ -81,12 +91,9 @@ export async function runDailyDigestForUser(
 
     const audioPath = await uploadAudio(digestEpisode.id, generateAudio(script));
     await updateEpisode(digestEpisode.id, { audioPath, status: "completed" });
-    const updated = await getEpisodeBySourceMessageId(userId, digestKey);
-    return updated ?? digestEpisode;
   } catch (error) {
     logger.error("Daily digest failed", { error });
     await updateEpisode(digestEpisode.id, { status: "failed" });
-    return digestEpisode;
   }
 }
 

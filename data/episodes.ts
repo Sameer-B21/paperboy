@@ -1,4 +1,4 @@
-export const briefs = [
+export const episodes = [
   {
     id: '2024-10-20',
     dateLabel: 'Sunday, Oct 20',
