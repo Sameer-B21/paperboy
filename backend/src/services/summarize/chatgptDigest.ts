@@ -5,6 +5,39 @@ export type DigestItem = {
   body: string;
 };
 
+type Usage = {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+};
+
+type ModelPricing = {
+  inputPer1MTokens: number;
+  outputPer1MTokens: number;
+};
+
+const MODEL_PRICING: Record<string, ModelPricing> = {
+  "gpt-4o-mini": { inputPer1MTokens: 0.15, outputPer1MTokens: 0.6 },
+  "gpt-4o": { inputPer1MTokens: 5, outputPer1MTokens: 15 },
+};
+
+function formatUsageCost(model: string, usage?: Usage): string {
+  if (!usage) {
+    return "tokens unknown; cost unknown";
+  }
+  const promptTokens = usage.prompt_tokens ?? 0;
+  const completionTokens = usage.completion_tokens ?? 0;
+  const totalTokens = usage.total_tokens ?? promptTokens + completionTokens;
+  const pricing = MODEL_PRICING[model];
+  if (!pricing) {
+    return `tokens ${promptTokens}/${completionTokens}/${totalTokens}; cost unknown for model ${model}`;
+  }
+  const cost =
+    (promptTokens / 1_000_000) * pricing.inputPer1MTokens +
+    (completionTokens / 1_000_000) * pricing.outputPer1MTokens;
+  return `tokens ${promptTokens}/${completionTokens}/${totalTokens}; estimated cost $${cost.toFixed(6)}`;
+}
+
 // Truncate input text to a maximum number of characters, adding a notice if truncated.
 function truncateInput(text: string, maxChars: number): string {
   if (text.length <= maxChars) {
@@ -99,7 +132,11 @@ export async function buildDailyDigestScript(payload: {
   // Parse OpenAI response
   const data = (await response.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
+    usage?: Usage;
+    model?: string;
   };
+  const model = data.model ?? (env.OPENAI_MODEL ?? "gpt-4o-mini");
+  console.log(`OpenAI usage (${model}): ${formatUsageCost(model, data.usage)}`);
 
   // Extract content from the response
   const content = data.choices?.[0]?.message?.content?.trim();
