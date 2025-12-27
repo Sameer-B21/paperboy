@@ -35,6 +35,7 @@ export default function ExploreScreen() {
     setIsLoading(true);
     try {
       const episodes = await listBriefs();
+      const todayKey = new Date().toDateString();
       const mapped = episodes.map((episode) => ({
         id: episode.id,
         dateLabel: new Date(episode.createdAt).toLocaleDateString(undefined, {
@@ -47,8 +48,12 @@ export default function ExploreScreen() {
           episode.status === 'completed'
             ? 'Ready to play. Tap to read the script.'
             : 'Processing. Check back soon.',
+        createdAt: episode.createdAt,
       }));
-      setBriefs(mapped);
+      const pastOnly = mapped.filter(
+        (episode) => new Date(episode.createdAt).toDateString() !== todayKey
+      );
+      setBriefs(pastOnly);
     } catch {
       setBriefs([]);
     } finally {
