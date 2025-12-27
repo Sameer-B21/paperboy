@@ -120,13 +120,31 @@ export async function getBrief(episodeId: string): Promise<EpisodeDetail> {
   return (await response.json()) as EpisodeDetail;
 }
 
-export async function generateDailyBrief(): Promise<void> {
+export async function generateDailyBrief(): Promise<EpisodeDetail | null> {
   await requireUserId();
   const response = await fetch(`${API_BASE_URL}/briefs/daily`, {
     method: 'POST',
     headers: await buildHeaders(true),
   });
+  if (response.status === 204) {
+    return null;
+  }
   if (!response.ok) {
     throw new Error('Unable to generate daily brief.');
   }
+  return (await response.json()) as EpisodeDetail;
+}
+
+export async function getLatestDailyBrief(): Promise<EpisodeDetail | null> {
+  await requireUserId();
+  const response = await fetch(`${API_BASE_URL}/briefs/daily/latest`, {
+    headers: await buildHeaders(false),
+  });
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error('Unable to load daily brief.');
+  }
+  return (await response.json()) as EpisodeDetail;
 }

@@ -1,11 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
-import { generateDailyBrief, getBrief, listBriefs } from '@/data/backend';
+import { getLatestDailyBrief } from '@/data/backend';
 
 const palette = {
   background: '#F8FAFC',
@@ -43,7 +43,7 @@ export default function TodayScreen() {
       case 'ready':
         return 'Your briefing is ready to play.';
       default:
-        return 'Press play to generate today’s briefing.';
+        return 'Your daily brief will appear here once it is ready.';
     }
   }, [errorMessage, playbackStatus]);
 
@@ -52,48 +52,39 @@ export default function TodayScreen() {
       return;
     }
     if (playbackStatus !== 'ready') {
-      await generatePodcast();
+      await loadDailyBrief();
       return;
     }
     setIsPlaying((prev) => !prev);
   };
 
-  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-  const generatePodcast = async () => {
+  const loadDailyBrief = async () => {
     setErrorMessage(null);
     setPlaybackStatus('ingesting');
 
     try {
-      await generateDailyBrief();
-      setPlaybackStatus('generating');
-
-      setPlaybackStatus('polling');
-
-      for (let attempt = 0; attempt < 30; attempt += 1) {
-        const episodes = await listBriefs();
-        const digest = episodes.find((episode) =>
-          episode.subject.toLowerCase().includes('daily newsletter digest')
-        );
-
-        if (digest && digest.status === 'completed') {
-          const detail = await getBrief(digest.id);
-          setPodcastScript(detail.script);
-          setAudioUrl(detail.audioUrl);
-          setBriefTitle(detail.subject);
-          setPlaybackStatus('ready');
-          return;
-        }
-
-        await delay(1500);
+      const digest = await getLatestDailyBrief();
+      if (!digest) {
+        setPlaybackStatus('idle');
+        setPodcastScript(null);
+        setAudioUrl(null);
+        setBriefTitle('Your Morning Brief');
+        setErrorMessage('No daily brief yet. Check back after 7am.');
+        return;
       }
-
-      throw new Error('The podcast took too long to generate.');
+      setPodcastScript(digest.script);
+      setAudioUrl(digest.audioUrl);
+      setBriefTitle(digest.subject);
+      setPlaybackStatus('ready');
     } catch (error) {
       setPlaybackStatus('error');
       setErrorMessage(error instanceof Error ? error.message : 'Something went wrong.');
     }
   };
+
+  useEffect(() => {
+    void loadDailyBrief();
+  }, []);
   
   const todayLabel = new Date().toLocaleDateString(undefined, {
     weekday: 'long',

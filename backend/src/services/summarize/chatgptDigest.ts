@@ -50,6 +50,7 @@ export async function buildDailyDigestScript(payload: {
     .join("\n\n");
 
   const input = truncateInput(combined, 12000);
+  console.log(`Input length to OpenAI: ${input.length} characters`);
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -71,6 +72,7 @@ export async function buildDailyDigestScript(payload: {
           role: "user",
           content:
             `Create a daily podcast script for ${payload.dateLabel}. ` +
+            "Each newsletter below is a single concatenated daily blurb. " +
             "Return JSON with keys \"summary\" (2-4 sentences) and \"script\" (4-6 minute read). " +
             "Use an upbeat, informative tone. Avoid bullet points in the script.\n\n" +
             input,

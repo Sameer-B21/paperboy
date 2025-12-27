@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 
-import { getEpisode, listEpisodes } from "../db/queries/episodes.sql.js";
+import { getEpisode, getLatestDailyDigest, listEpisodes } from "../db/queries/episodes.sql.js";
 import { downloadAudio } from "../services/storage/uploadAudio.js";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/errors.js";
@@ -58,6 +58,41 @@ export async function getBriefAudio(req: Request, res: Response) {
 
 export async function generateDailyBrief(req: Request, res: Response) {
   const userId = readUserId(req);
-  void runDailyDigestForUser(userId);
-  res.json({ status: "queued" });
+  const digest = await runDailyDigestForUser(userId);
+  if (!digest) {
+    res.status(204).json({ status: "empty" });
+    return;
+  }
+  const episode = await getEpisode(digest.id);
+  if (!episode) {
+    res.status(404).json({ error: "Daily brief not found." });
+    return;
+  }
+  res.json({
+    id: episode.id,
+    subject: episode.subject,
+    summary: episode.summary,
+    script: episode.script,
+    status: episode.status,
+    audioUrl: episode.audioPath ? `${env.BASE_URL}/briefs/${episode.id}/audio` : null,
+    createdAt: episode.createdAt,
+  });
+}
+
+export async function getLatestDailyBrief(req: Request, res: Response) {
+  const userId = readUserId(req);
+  const episode = await getLatestDailyDigest(userId);
+  if (!episode) {
+    res.status(404).json({ error: "Daily brief not found." });
+    return;
+  }
+  res.json({
+    id: episode.id,
+    subject: episode.subject,
+    summary: episode.summary,
+    script: episode.script,
+    status: episode.status,
+    audioUrl: episode.audioPath ? `${env.BASE_URL}/briefs/${episode.id}/audio` : null,
+    createdAt: episode.createdAt,
+  });
 }

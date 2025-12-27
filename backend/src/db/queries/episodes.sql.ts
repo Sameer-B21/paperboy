@@ -122,6 +122,25 @@ export async function listEpisodesSince(
   return (data ?? []).map((row) => toEpisode(row as EpisodeRow));
 }
 
+export async function listEpisodesForDay(
+  userId: string,
+  startIso: string,
+  endIso: string
+): Promise<Episode[]> {
+  const { data, error } = await supabase
+    .from("episodes")
+    .select("*")
+    .eq("user_id", userId)
+    .gte("created_at", startIso)
+    .lt("created_at", endIso)
+    .not("source_message_id", "ilike", "digest-%")
+    .order("created_at", { ascending: true });
+  if (error) {
+    throw new Error(`Failed to list episodes for day: ${error.message}`);
+  }
+  return (data ?? []).map((row) => toEpisode(row as EpisodeRow));
+}
+
 export async function getEpisodeBySourceMessageId(
   userId: string,
   sourceMessageId: string
@@ -134,6 +153,21 @@ export async function getEpisodeBySourceMessageId(
     .maybeSingle();
   if (error) {
     throw new Error(`Failed to load episode by message: ${error.message}`);
+  }
+  return data ? toEpisode(data as EpisodeRow) : null;
+}
+
+export async function getLatestDailyDigest(userId: string): Promise<Episode | null> {
+  const { data, error } = await supabase
+    .from("episodes")
+    .select("*")
+    .eq("user_id", userId)
+    .ilike("source_message_id", "digest-%")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    throw new Error(`Failed to load daily digest: ${error.message}`);
   }
   return data ? toEpisode(data as EpisodeRow) : null;
 }
