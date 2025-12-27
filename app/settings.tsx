@@ -112,25 +112,10 @@ export default function SettingsScreen() {
   }, [params]);
 
   useEffect(() => {
-    const autoDiscover = async () => {
-      if (!isConnected || hasDiscovered) {
-        return;
-      }
-      setHasDiscovered(true);
-      setIsSyncing(true);
-      setIsLoading(true);
-      try {
-        const result = await syncGmail();
-        setStatusMessage(`Discovered ${result.discovered} newsletters.`);
-        await loadNewsletters();
-      } catch (error) {
-        setStatusMessage(error instanceof Error ? error.message : 'Unable to sync Gmail.');
-      } finally {
-        setIsSyncing(false);
-        setIsLoading(false);
-      }
-    };
-    void autoDiscover();
+    if (!isConnected || hasDiscovered) {
+      return;
+    }
+    setHasDiscovered(true);
   }, [isConnected, hasDiscovered]);
 
   const toggleNewsletter = async (id: string) => {
@@ -219,9 +204,6 @@ export default function SettingsScreen() {
           <View>
             <Text style={styles.kicker}>Settings</Text>
             <Text style={styles.title}>Newsletter connections</Text>
-          </View>
-          <View style={styles.iconBadge}>
-            <Ionicons name="mail-open-outline" size={20} color={palette.accentShadow} />
           </View>
         </View>
 

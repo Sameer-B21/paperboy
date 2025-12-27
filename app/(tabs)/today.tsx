@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ const palette = {
 };
 
 export default function TodayScreen() {
+  const router = useRouter();
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackStatus, setPlaybackStatus] = useState<
     'idle' | 'ingesting' | 'generating' | 'polling' | 'ready' | 'error'
@@ -108,7 +110,12 @@ export default function TodayScreen() {
       >
         <View style={styles.headerRow}>
           <Text style={styles.greeting}>Company Logo</Text>
-          <TouchableOpacity style={styles.iconButton} activeOpacity={0.7} accessibilityRole="button">
+          <TouchableOpacity
+            style={styles.iconButton}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            onPress={() => router.push('/settings')}
+          >
             <Ionicons name="settings-outline" size={22} color={palette.secondaryText} />
           </TouchableOpacity>
         </View>

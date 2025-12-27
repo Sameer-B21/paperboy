@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
 import { listBriefs } from '@/data/backend';
@@ -19,6 +19,7 @@ const palette = {
 };
 
 export default function ExploreScreen() {
+  const router = useRouter();
   const [briefs, setBriefs] = useState<
     Array<{
       id: string;
@@ -70,8 +71,13 @@ export default function ExploreScreen() {
           <View>
             <Text style={styles.greeting}>Company Logo</Text>
           </View>
-          <TouchableOpacity style={styles.iconButton} activeOpacity={0.7} accessibilityRole="button">
-            <Ionicons name="bookmark-outline" size={22} color={palette.secondaryText} />
+          <TouchableOpacity
+            style={styles.iconButton}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            onPress={() => router.push('/settings')}
+          >
+            <Ionicons name="settings-outline" size={22} color={palette.secondaryText} />
           </TouchableOpacity>
         </View>
 
