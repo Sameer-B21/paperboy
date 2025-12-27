@@ -8,6 +8,8 @@ import {
 
 export const gmailRouter = Router();
 
+//gmail routes
+
 gmailRouter.post("/sync", syncGmail);
 gmailRouter.get("/newsletters", listUserNewsletters);
 gmailRouter.patch("/newsletters/:newsletterId", updateNewsletter);

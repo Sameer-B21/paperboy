@@ -1,7 +1,8 @@
-import { decryptString, encryptString } from "./encrypt.js";
 import { getConnectionByUser, upsertConnection } from "../../db/queries/connections.sql.js";
 import type { Connection } from "../../db/types.js";
+import { decryptString, encryptString } from "./encrypt.js";
 
+// Store encrypted tokens for a user's connection to an external provider.
 export async function storeConnectionTokens(payload: {
   userId: string;
   provider: Connection["provider"];
@@ -22,6 +23,7 @@ export async function storeConnectionTokens(payload: {
   });
 }
 
+// Load and decrypt tokens for a user's connection to an external provider.
 export async function loadConnectionTokens(
   userId: string,
   provider: Connection["provider"] = "gmail"

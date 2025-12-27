@@ -1,8 +1,8 @@
-import { runDailyDigestForAllUsers } from "./workers/dailyDigest.worker.js";
 import { logger } from "../utils/logger.js";
+import { runDailyDigestForAllUsers } from "./workers/dailyDigest.worker.js";
 
 let lastRunKey: string | null = null;
-
+//checks every minute if it's 7 AM to run daily digest for all users
 async function tick() {
   const now = new Date();
   if (now.getHours() !== 7 || now.getMinutes() !== 0) {
@@ -20,6 +20,7 @@ async function tick() {
   }
 }
 
+//starts the daily digest scheduler
 export function startDailyDigestScheduler(): void {
   void tick();
   setInterval(() => {

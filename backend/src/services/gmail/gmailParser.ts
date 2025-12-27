@@ -21,13 +21,17 @@ export type ParsedMessage = {
   body: string;
   headers: Record<string, string>;
 };
+import { decode as atob } from "base-64";
 
+// Decodes a base64url encoded string
 function decodeBase64Url(value: string): string {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-  const buffer = Buffer.from(normalized, "base64");
-  return buffer.toString("utf8");
+  // pad to multiple of 4 (some base64 decoders need it)
+  const padded = normalized + "===".slice((normalized.length + 3) % 4);
+  return atob(padded);
 }
 
+// Normalizes Gmail headers into a key-value map
 function normalizeHeaders(headers: GmailHeader[] | null | undefined): Record<string, string> {
   const map: Record<string, string> = {};
   headers?.forEach((header) => {
@@ -39,17 +43,21 @@ function normalizeHeaders(headers: GmailHeader[] | null | undefined): Record<str
   return map;
 }
 
+// Recursively extracts the body text from a GmailPart
 function extractBody(part?: GmailPart | null): string {
   if (!part) {
     return "";
   }
+  // Check for text/plain part
   if (part.mimeType === "text/plain" && part.body?.data) {
     return decodeBase64Url(part.body.data);
   }
+  // Fallback to text/html part if no text/plain found
   if (part.mimeType === "text/html" && part.body?.data) {
     const raw = decodeBase64Url(part.body.data);
     return raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   }
+  // Recursively check sub-parts
   if (part.parts && part.parts.length > 0) {
     for (const subPart of part.parts) {
       const body = extractBody(subPart);
@@ -61,6 +69,7 @@ function extractBody(part?: GmailPart | null): string {
   return "";
 }
 
+// Parses a GmailMessage into a structured ParsedMessage
 export function parseMessage(message: GmailMessage): ParsedMessage | null {
   if (!message.id || !message.payload) {
     return null;

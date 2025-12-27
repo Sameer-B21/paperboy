@@ -4,5 +4,7 @@ import { getGoogleAuthUrl, handleGoogleCallback } from "../controllers/auth.cont
 
 export const authRouter = Router();
 
+//google auth routes
+
 authRouter.get("/google", getGoogleAuthUrl);
 authRouter.get("/google/callback", handleGoogleCallback);

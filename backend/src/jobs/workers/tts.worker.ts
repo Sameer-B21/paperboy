@@ -2,6 +2,7 @@ import { updateEpisode } from "../../db/queries/episodes.sql.js";
 import { uploadAudio } from "../../services/storage/uploadAudio.js";
 import { generateAudio } from "../../services/tts/generateAudio.js";
 
+//function to generate episode audio from script
 export async function generateEpisodeAudio(payload: {
   episodeId: string;
   script: string;

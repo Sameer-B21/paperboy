@@ -1,5 +1,6 @@
 import { audioBucket, supabase } from "../../config/supabase.js";
 
+// Upload audio file to Supabase Storage
 export async function uploadAudio(episodeId: string, payload: Buffer): Promise<string> {
   const path = `${episodeId}.txt`;
   const { error } = await supabase.storage.from(audioBucket).upload(path, payload, {
@@ -12,6 +13,7 @@ export async function uploadAudio(episodeId: string, payload: Buffer): Promise<s
   return path;
 }
 
+// Download audio file from Supabase Storage
 export async function downloadAudio(path: string): Promise<{ data: Buffer; contentType?: string }> {
   const { data, error } = await supabase.storage.from(audioBucket).download(path);
   if (error || !data) {

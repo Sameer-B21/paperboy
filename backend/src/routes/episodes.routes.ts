@@ -2,13 +2,15 @@ import { Router } from "express";
 
 import {
   generateDailyEpisode,
-  getLatestDailyEpisode,
   getEpisode,
   getEpisodeAudio,
+  getLatestDailyEpisode,
   listEpisodes,
 } from "../controllers/episodes.controller.js";
 
 export const episodesRouter = Router();
+
+//episode routes
 
 episodesRouter.get("/", listEpisodes);
 episodesRouter.post("/daily", generateDailyEpisode);

@@ -5,6 +5,7 @@ export type DigestItem = {
   body: string;
 };
 
+// Truncate input text to a maximum number of characters, adding a notice if truncated.
 function truncateInput(text: string, maxChars: number): string {
   if (text.length <= maxChars) {
     return text;
@@ -12,21 +13,26 @@ function truncateInput(text: string, maxChars: number): string {
   return `${text.slice(0, maxChars)}\n\n[Truncated for length]`;
 }
 
+// Extract JSON object with "summary" and "script" from content string.
 function extractJson(content: string): { summary: string; script: string } | null {
   try {
+    // Try parsing the entire content as JSON first
     const parsed = JSON.parse(content) as { summary?: string; script?: string };
     if (parsed.summary && parsed.script) {
       return { summary: parsed.summary, script: parsed.script };
     }
   } catch {
     // fall through to regex extraction
+    //----------------------------------------
   }
 
+  // Use regex to find JSON object within the content
   const match = content.match(/\{[\s\S]*\}/);
   if (!match) {
     return null;
   }
   try {
+    // Try parsing the matched JSON string
     const parsed = JSON.parse(match[0]) as { summary?: string; script?: string };
     if (parsed.summary && parsed.script) {
       return { summary: parsed.summary, script: parsed.script };
@@ -37,6 +43,7 @@ function extractJson(content: string): { summary: string; script: string } | nul
   return null;
 }
 
+// Build a daily digest podcast script using OpenAI's Chat Completion API.
 export async function buildDailyDigestScript(payload: {
   dateLabel: string;
   items: DigestItem[];
@@ -45,13 +52,16 @@ export async function buildDailyDigestScript(payload: {
     throw new Error("Missing OPENAI_API_KEY.");
   }
 
+  // Combine all newsletter items into a single input string.
   const combined = payload.items
     .map((item, index) => `Newsletter ${index + 1}: ${item.subject}\n${item.body}`)
     .join("\n\n");
 
+  //truncate message
   const input = truncateInput(combined, 12000);
-  console.log(`Input length to OpenAI: ${input.length} characters`);
+  // console.log(`Input length to OpenAI: ${input.length} characters`);
 
+  // Call OpenAI Chat Completion API
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -86,15 +96,18 @@ export async function buildDailyDigestScript(payload: {
     throw new Error(`OpenAI request failed: ${response.status} ${errorText}`);
   }
 
+  // Parse OpenAI response
   const data = (await response.json()) as {
     choices?: Array<{ message?: { content?: string } }>;
   };
 
+  // Extract content from the response
   const content = data.choices?.[0]?.message?.content?.trim();
   if (!content) {
     throw new Error("OpenAI response missing content.");
   }
 
+  // Try to extract JSON from the content
   const parsed = extractJson(content);
   if (parsed) {
     return parsed;

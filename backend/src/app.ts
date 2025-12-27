@@ -7,25 +7,31 @@ import { gmailRouter } from "./routes/gmail.routes.js";
 import { webhooksRouter } from "./routes/webhooks.routes.js";
 import { AppError, toErrorMessage } from "./utils/errors.js";
 
+// Create and configure the Express application.
 export function createApp() {
   const app = express();
 
+  // Middleware
   app.use(cors());
   app.use(express.json({ limit: "2mb" }));
 
+  // Health check endpoint
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
   });
 
+  // Routes
   app.use("/auth", authRouter);
   app.use("/gmail", gmailRouter);
   app.use("/episodes", episodesRouter);
   app.use("/webhooks", webhooksRouter);
 
+  // 404 handler
   app.use((req, res) => {
     res.status(404).json({ error: `Route ${req.method} ${req.path} not found.` });
   });
 
+  // Error handler
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (err instanceof AppError) {
       res.status(err.status).json({ error: err.message });

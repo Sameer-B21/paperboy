@@ -1,3 +1,4 @@
+// This is a placeholder implementation of a text-to-speech (TTS) audio generation function.
 export function generateAudio(script: string): Buffer {
   const payload = [
     "Podcast audio placeholder",
