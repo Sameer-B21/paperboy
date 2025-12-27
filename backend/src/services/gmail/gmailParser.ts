@@ -21,14 +21,12 @@ export type ParsedMessage = {
   body: string;
   headers: Record<string, string>;
 };
-import { decode as atob } from "base-64";
-
 // Decodes a base64url encoded string
 function decodeBase64Url(value: string): string {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
   // pad to multiple of 4 (some base64 decoders need it)
   const padded = normalized + "===".slice((normalized.length + 3) % 4);
-  return atob(padded);
+  return Buffer.from(padded, "base64").toString("utf8");
 }
 
 // Normalizes Gmail headers into a key-value map

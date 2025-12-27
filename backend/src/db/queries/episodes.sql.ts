@@ -69,13 +69,15 @@ export async function createEpisode(payload: {
 // Updates an existing episode record in the database
 export async function updateEpisode(
   episodeId: string,
-  updates: Partial<Pick<Episode, "summary" | "script" | "audioPath" | "status">>
+  updates: Partial<Pick<Episode, "summary" | "script" | "audioPath" | "status" | "body" | "subject">>
 ): Promise<Episode> {
   const updatePayload: {
     summary?: string | null;
     script?: string | null;
     audio_path?: string | null;
     status?: Episode["status"];
+    body?: string | null;
+    subject?: string;
     updated_at: string;
   } = {
     updated_at: new Date().toISOString(),
@@ -91,6 +93,12 @@ export async function updateEpisode(
   }
   if (updates.status !== undefined) {
     updatePayload.status = updates.status;
+  }
+  if (updates.body !== undefined) {
+    updatePayload.body = updates.body;
+  }
+  if (updates.subject !== undefined) {
+    updatePayload.subject = updates.subject;
   }
 
   const { data, error } = await supabase

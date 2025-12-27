@@ -15,6 +15,7 @@ type EpisodeListItem = {
   subject: string;
   status: string;
   createdAt: string;
+  sourceMessageId: string | null;
 };
 
 type EpisodeDetail = {

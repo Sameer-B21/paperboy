@@ -1,8 +1,6 @@
 import { updateEpisode } from "../../db/queries/episodes.sql.js";
 import { discoverNewslettersForUser, ingestNewsletterForUser } from "../../services/gmail/gmailSync.js";
 import { jobQueue } from "../queue.js";
-import { summarizeEpisode } from "./summarize.worker.js";
-import { generateEpisodeAudio } from "./tts.worker.js";
 
 //enqueue a job to discover newsletters for a user
 export async function enqueueGmailDiscovery(userId: string): Promise<{ discovered: number }> {
@@ -25,18 +23,10 @@ export async function enqueueNewsletterIngest(
   seeds.forEach((seed) => {
     jobQueue.add(async () => {
       try {
-        //create script and generate audio
-        const { script } = await summarizeEpisode({
-          episodeId: seed.episodeId,
-          subject: seed.subject,
-          body: seed.body,
-        });
-        await generateEpisodeAudio({
-          episodeId: seed.episodeId,
-          script,
-        });
+        // Mark ingestion complete without generating scripts for non-digests
+        await updateEpisode(seed.episodeId, {});
       } catch (error) {
-        await updateEpisode(seed.episodeId, { status: "failed" });
+        await updateEpisode(seed.episodeId, {});
       }
     });
   });

@@ -40,12 +40,10 @@ export async function runDailyDigestForUser(
   const dateLabel = formatDateLabel(windowEnd);
 
   // Check if digest already exists
-  const digestKey = options.force ? `digest-${dayKey}-${now.getTime()}` : `digest-${dayKey}`;
-  if (!options.force) {
-    const existing = await getEpisodeBySourceMessageId(userId, digestKey);
-    if (existing) {
-      return null;
-    }
+  const digestKey = `digest-${dayKey}`;
+  const existing = await getEpisodeBySourceMessageId(userId, digestKey);
+  if (existing && !options.force) {
+    return null;
   }
 
   // Fetch episodes for the day
@@ -95,13 +93,24 @@ export async function runDailyDigestForUser(
 
   // Create the digest episode by combining all items
   const combinedBody = items.map((item) => `${item.subject}\n${item.body}`).join("\n\n");
-  const digestEpisode = await createEpisode({
-    userId,
-    newsletterId: null,
-    subject: `Daily Newsletter Digest - ${dateLabel}`,
-    sourceMessageId: digestKey,
-    body: combinedBody,
-  });
+  const digestEpisode =
+    existing ??
+    (await createEpisode({
+      userId,
+      newsletterId: null,
+      subject: `Daily Newsletter Digest - ${dateLabel}`,
+      sourceMessageId: digestKey,
+      body: combinedBody,
+    }));
+  if (existing) {
+    await updateEpisode(digestEpisode.id, {
+      subject: `Daily Newsletter Digest - ${dateLabel}`,
+      body: combinedBody,
+      summary: null,
+      script: null,
+      audioPath: null,
+    });
+  }
 
   try {
     // Build the daily digest script
@@ -110,10 +119,9 @@ export async function runDailyDigestForUser(
 
     // Generate audio and upload
     const audioPath = await uploadAudio(digestEpisode.id, generateAudio(script));
-    await updateEpisode(digestEpisode.id, { audioPath, status: "completed" });
+    await updateEpisode(digestEpisode.id, { audioPath });
   } catch (error) {
     logger.error("Daily digest failed", { error });
-    await updateEpisode(digestEpisode.id, { status: "failed" });
   }
 
   return digestEpisode.id;

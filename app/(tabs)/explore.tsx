@@ -35,8 +35,11 @@ export default function ExploreScreen() {
     setIsLoading(true);
     try {
       const episodes = await listEpisodes();
+      const digests = episodes.filter((episode) =>
+        episode.sourceMessageId?.startsWith('digest-')
+      );
       const todayKey = new Date().toDateString();
-      const mapped = episodes.map((episode) => ({
+      const mapped = digests.map((episode) => ({
         id: episode.id,
         dateLabel: new Date(episode.createdAt).toLocaleDateString(undefined, {
           month: 'short',

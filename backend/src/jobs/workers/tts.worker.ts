@@ -12,7 +12,6 @@ export async function generateEpisodeAudio(payload: {
 
   await updateEpisode(payload.episodeId, {
     audioPath,
-    status: "completed",
   });
 
   return audioPath;

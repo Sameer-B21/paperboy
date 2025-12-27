@@ -28,6 +28,7 @@ export async function listEpisodes(req: Request, res: Response) {
     subject: episode.subject,
     status: episode.status,
     createdAt: episode.createdAt,
+    sourceMessageId: episode.sourceMessageId,
   }));
   res.json({ episodes: payload });
 }
