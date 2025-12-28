@@ -11,7 +11,12 @@ import { AppError } from "../utils/errors.js";
 
 //reads user id from request headers or query parameters and returns it
 function readUserId(req: Request): string {
-  const userId = req.header("x-user-id") ?? req.query.userId;
+  const userId =
+    req.header("x-user-id") ??
+    req.query.userId ??
+    req.query.userid ??
+    req.query.userID ??
+    req.query.userld;
   if (typeof userId !== "string") {
     throw new AppError("x-user-id header is required.", 400);
   }
@@ -35,7 +40,7 @@ export async function listEpisodes(req: Request, res: Response) {
 
 //gets a specific episode by id for the authenticated user
 export async function getEpisode(req: Request, res: Response) {
-  readUserId(req);
+  const userId = readUserId(req);
   //get episode from db
   const episode = await getEpisodeById(req.params.episodeId);
   if (!episode) {
@@ -48,7 +53,9 @@ export async function getEpisode(req: Request, res: Response) {
     summary: episode.summary,
     script: episode.script,
     status: episode.status,
-    audioUrl: episode.audioPath ? `${env.BASE_URL}/episodes/${episode.id}/audio` : null,
+    audioUrl: episode.audioPath
+      ? `${env.BASE_URL}/episodes/${episode.id}/audio?userId=${encodeURIComponent(userId)}`
+      : null,
     createdAt: episode.createdAt,
   });
 }
@@ -89,7 +96,9 @@ export async function generateDailyEpisode(req: Request, res: Response) {
     summary: episode.summary,
     script: episode.script,
     status: episode.status,
-    audioUrl: episode.audioPath ? `${env.BASE_URL}/episodes/${episode.id}/audio` : null,
+    audioUrl: episode.audioPath
+      ? `${env.BASE_URL}/episodes/${episode.id}/audio?userId=${encodeURIComponent(userId)}`
+      : null,
     createdAt: episode.createdAt,
   });
 }
@@ -109,7 +118,9 @@ export async function getLatestDailyEpisode(req: Request, res: Response) {
     summary: episode.summary,
     script: episode.script,
     status: episode.status,
-    audioUrl: episode.audioPath ? `${env.BASE_URL}/episodes/${episode.id}/audio` : null,
+    audioUrl: episode.audioPath
+      ? `${env.BASE_URL}/episodes/${episode.id}/audio?userId=${encodeURIComponent(userId)}`
+      : null,
     createdAt: episode.createdAt,
   });
 }

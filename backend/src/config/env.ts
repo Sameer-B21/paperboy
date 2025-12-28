@@ -17,6 +17,9 @@ export type Env = {
   TOKEN_ENCRYPTION_KEY: string;
   OPENAI_API_KEY: string;
   OPENAI_MODEL?: string;
+  OPENAI_TTS_MODEL?: string;
+  OPENAI_TTS_VOICE?: string;
+  OPENAI_TTS_PRICE_PER_1M_CHARS?: string;
   FRONTEND_URL?: string;
 };
 
@@ -43,5 +46,8 @@ export const env: Env = {
   TOKEN_ENCRYPTION_KEY: requireEnv("TOKEN_ENCRYPTION_KEY"),
   OPENAI_API_KEY: requireEnv("OPENAI_API_KEY"),
   OPENAI_MODEL: process.env.OPENAI_MODEL,
+  OPENAI_TTS_MODEL: process.env.OPENAI_TTS_MODEL,
+  OPENAI_TTS_VOICE: process.env.OPENAI_TTS_VOICE,
+  OPENAI_TTS_PRICE_PER_1M_CHARS: process.env.OPENAI_TTS_PRICE_PER_1M_CHARS,
   FRONTEND_URL: process.env.FRONTEND_URL,
 };

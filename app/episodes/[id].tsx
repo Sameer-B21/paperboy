@@ -1,11 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
 import { getEpisode } from '@/data/backend';
+
 
 const palette = {
   background: '#F8FAFC',
@@ -33,6 +35,9 @@ export default function EpisodeDetailScreen() {
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -53,8 +58,60 @@ export default function EpisodeDetailScreen() {
     void loadEpisode();
   }, [id]);
 
-  const handlePlayPress = () => {
-    setIsPlaying((prev) => !prev);
+  const handlePlayPress = async () => {
+
+    setPlaybackError(null);
+
+    if (!episode?.audioUrl) {
+      setPlaybackError('Audio not ready yet.');
+      return;
+    }
+    try {
+
+      const sound = await ensureSound(episode.audioUrl);
+      const status = await sound.getStatusAsync();
+      if (status.isLoaded && status.isPlaying) {
+        await sound.pauseAsync();
+      } else {
+        await sound.playAsync();
+      }
+    } catch (error) {
+      setPlaybackError(error instanceof Error ? error.message : 'Unable to play audio.');
+    }
+  };
+
+  useEffect(() => {
+    void Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+    return () => {
+      if (soundRef.current) {
+        void soundRef.current.unloadAsync();
+        soundRef.current = null;
+        audioUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  const ensureSound = async (uri: string) => {
+    if (soundRef.current && audioUrlRef.current === uri) {
+      return soundRef.current;
+    }
+    if (soundRef.current) {
+      await soundRef.current.unloadAsync();
+      setIsPlaying(false);
+    }
+    const { sound } = await Audio.Sound.createAsync(
+      { uri },
+      { shouldPlay: false },
+      (status) => {
+        if (!status.isLoaded) {
+          return;
+        }
+        setIsPlaying(status.isPlaying);
+      }
+    );
+    soundRef.current = sound;
+    audioUrlRef.current = uri;
+    return sound;
   };
 
   if (!episode) {
@@ -148,6 +205,7 @@ export default function EpisodeDetailScreen() {
             <Text style={styles.playHint}>
               {isPlaying ? 'Playing...' : 'Press play to ease into the day'}
             </Text>
+            {playbackError ? <Text style={styles.errorText}>{playbackError}</Text> : null}
           </View>
 
           <View style={styles.progressBlock}>
@@ -280,6 +338,11 @@ const styles = StyleSheet.create({
   playHint: {
     color: palette.secondaryText,
     fontSize: 14,
+    fontFamily: Fonts.sans,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 13,
     fontFamily: Fonts.sans,
   },
   progressBlock: {

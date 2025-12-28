@@ -2,10 +2,10 @@ import { audioBucket, supabase } from "../../config/supabase.js";
 
 // Upload audio file to Supabase Storage
 export async function uploadAudio(episodeId: string, payload: Buffer): Promise<string> {
-  const path = `${episodeId}.txt`;
+  const path = `${episodeId}.mp3`;
   const { error } = await supabase.storage.from(audioBucket).upload(path, payload, {
     upsert: true,
-    contentType: "text/plain; charset=utf-8",
+    contentType: "audio/mpeg",
   });
   if (error) {
     throw new Error(`Failed to upload audio: ${error.message}`);

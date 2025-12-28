@@ -7,7 +7,7 @@ export async function generateEpisodeAudio(payload: {
   episodeId: string;
   script: string;
 }): Promise<string> {
-  const audioBuffer = generateAudio(payload.script);
+  const audioBuffer = await generateAudio(payload.script);
   const audioPath = await uploadAudio(payload.episodeId, audioBuffer);
 
   await updateEpisode(payload.episodeId, {

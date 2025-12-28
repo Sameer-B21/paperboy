@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Audio } from 'expo-av';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,12 +25,18 @@ export default function TodayScreen() {
     'idle' | 'ingesting' | 'generating' | 'polling' | 'ready' | 'error'
   >('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
   const [podcastScript, setPodcastScript] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [episodeTitle, setEpisodeTitle] = useState<string>('Your Morning Brief');
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
 
   const isBusy = playbackStatus === 'ingesting' || playbackStatus === 'generating' || playbackStatus === 'polling';
   const statusText = useMemo(() => {
+    if (playbackError) {
+      return playbackError;
+    }
     if (errorMessage) {
       return errorMessage;
     }
@@ -45,46 +52,97 @@ export default function TodayScreen() {
       default:
         return 'Your daily brief will appear here once it is ready.';
     }
-  }, [errorMessage, playbackStatus]);
+  }, [errorMessage, playbackError, playbackStatus]);
 
   const handlePlayPress = async () => {
     if (isBusy) {
       return;
     }
-    if (playbackStatus !== 'ready') {
-      await loadDailyEpisode();
+    setPlaybackError(null);
+
+    if (!audioUrl) {
+      setPlaybackError('Audio not ready yet.');
       return;
     }
-    setIsPlaying((prev) => !prev);
-  };
 
-  const loadDailyEpisode = async () => {
+    try {
+      const sound = await ensureSound(audioUrl);
+      const status = await sound.getStatusAsync();
+      if (status.isLoaded && status.isPlaying) {
+        await sound.pauseAsync();
+      } else {
+
+        await sound.playAsync();
+      }
+    } catch (error) {
+      setPlaybackError(error instanceof Error ? error.message : 'Unable to play audio.');
+    
+    }
+  };
+  const loadDailyEpisode = async (): Promise<string | null> => {
     setErrorMessage(null);
     setPlaybackStatus('ingesting');
 
     try {
-      const digest = await getLatestDailyEpisode();
-      if (!digest) {
+      let digest = await getLatestDailyEpisode();
+      if (!digest || !digest.audioUrl) {
         setPlaybackStatus('idle');
         setPodcastScript(null);
         setAudioUrl(null);
         setEpisodeTitle('Your Morning Brief');
         setErrorMessage('No daily brief yet. Check back after 7am.');
-        return;
+        return null;
       }
       setPodcastScript(digest.script);
       setAudioUrl(digest.audioUrl);
       setEpisodeTitle(digest.subject);
       setPlaybackStatus('ready');
+      return digest.audioUrl;
     } catch (error) {
       setPlaybackStatus('error');
       setErrorMessage(error instanceof Error ? error.message : 'Something went wrong.');
+      return null;
     }
   };
 
   useEffect(() => {
     void loadDailyEpisode();
   }, []);
+
+  useEffect(() => {
+    void Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+    return () => {
+      if (soundRef.current) {
+        void soundRef.current.unloadAsync();
+        soundRef.current = null;
+        audioUrlRef.current = null;
+      }
+    };
+  }, []);
+
+  const ensureSound = async (uri: string) => {
+    if (soundRef.current && audioUrlRef.current === uri) {
+      return soundRef.current;
+    }
+    if (soundRef.current) {
+      await soundRef.current.unloadAsync();
+      setIsPlaying(false);
+    }
+    const { sound } = await Audio.Sound.createAsync(
+      { uri },
+      { shouldPlay: false },
+      (status) => {
+        if (!status.isLoaded) {
+          
+          return;
+        }
+        setIsPlaying(status.isPlaying);
+      }
+    );
+    soundRef.current = sound;
+    audioUrlRef.current = uri;
+    return sound;
+  };
   
   const todayLabel = new Date().toLocaleDateString(undefined, {
     weekday: 'long',

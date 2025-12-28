@@ -55,7 +55,28 @@ export async function runDailyDigestForUser(
         endOfDay.toISOString()
       );
   if (episodes.length === 0) {
-    return null;
+    if (!options.force) {
+      return null;
+    }
+    const digestEpisode =
+      existing ??
+      (await createEpisode({
+        userId,
+        newsletterId: null,
+        subject: `Daily Newsletter Digest - ${dateLabel}`,
+        sourceMessageId: digestKey,
+        body: null,
+      }));
+    await updateEpisode(digestEpisode.id, {
+      subject: `Daily Newsletter Digest - ${dateLabel}`,
+      body: null,
+      summary: `No newsletters were imported for ${dateLabel}.`,
+      script:
+        `There were no newsletters to summarize for ${dateLabel}. ` +
+        "Sync your inbox and try again later.",
+      audioPath: null,
+    });
+    return digestEpisode.id;
   }
   // console.log("Found episodes for digest", { userId, dayKey, count: episodes.length });
 
@@ -88,7 +109,28 @@ export async function runDailyDigestForUser(
     .filter((item) => item.body.trim().length > 0);
 
   if (items.length === 0) {
-    return null;
+    if (!options.force) {
+      return null;
+    }
+    const digestEpisode =
+      existing ??
+      (await createEpisode({
+        userId,
+        newsletterId: null,
+        subject: `Daily Newsletter Digest - ${dateLabel}`,
+        sourceMessageId: digestKey,
+        body: null,
+      }));
+    await updateEpisode(digestEpisode.id, {
+      subject: `Daily Newsletter Digest - ${dateLabel}`,
+      body: null,
+      summary: `No newsletters were imported for ${dateLabel}.`,
+      script:
+        `There were no newsletters to summarize for ${dateLabel}. ` +
+        "Sync your inbox and try again later.",
+      audioPath: null,
+    });
+    return digestEpisode.id;
   }
 
   // Create the digest episode by combining all items
@@ -118,7 +160,7 @@ export async function runDailyDigestForUser(
     await updateEpisode(digestEpisode.id, { summary, script });
 
     // Generate audio and upload
-    const audioPath = await uploadAudio(digestEpisode.id, generateAudio(script));
+    const audioPath = await uploadAudio(digestEpisode.id, await generateAudio(script));
     await updateEpisode(digestEpisode.id, { audioPath });
   } catch (error) {
     logger.error("Daily digest failed", { error });
