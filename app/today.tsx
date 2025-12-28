@@ -32,6 +32,7 @@ const brandName = 'Paperboy';
 
 export default function TodayScreen() {
   const router = useRouter();
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackStatus, setPlaybackStatus] = useState<
     'idle' | 'ingesting' | 'generating' | 'polling' | 'ready' | 'error'
@@ -113,6 +114,8 @@ export default function TodayScreen() {
       setPlaybackStatus('error');
       setErrorMessage(error instanceof Error ? error.message : 'Something went wrong.');
       return null;
+    } finally {
+      setIsInitialLoading(false);
     }
   };
 
@@ -160,7 +163,9 @@ export default function TodayScreen() {
     day: 'numeric',
   });
 
-  const statusHeadline = audioUrl ? 'Brief is ready' : "Brief hasn't arrived yet";
+  const hasEpisode = Boolean(audioUrl);
+  const showEmpty = !isInitialLoading && !hasEpisode;
+  const statusHeadline = hasEpisode ? 'Brief is ready' : "Paperboy hasn't arrived yet";
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -202,39 +207,54 @@ export default function TodayScreen() {
         
 
         <View style={styles.deliveryCard}>
-          <Text style={styles.deliveryEyebrow}>DELIVERED THIS MORNING</Text>
+          {hasEpisode ? (
+            <Text style={styles.deliveryEyebrow}>DELIVERED THIS MORNING</Text>
+          ) : (
+            <Text style={styles.deliveryEyebrow}>NO DELIVERY YET</Text>
+          )}
           <Text style={styles.deliveryDate}>{todayLabel}</Text>
           <View style={styles.divider} />
 
           <View style={styles.statusBadge}>
             <View style={styles.badgeIcon}>
-              <Ionicons name={audioUrl ? 'newspaper-outline' : 'time-outline'} size={26} color={palette.icon} />
+              {isInitialLoading ? (
+                <ActivityIndicator size="small" color={palette.icon} />
+              ) : (
+                <Ionicons name={hasEpisode ? 'newspaper-outline' : 'bicycle-outline'} size={26} color={palette.icon} />
+              )}
             </View>
             <Text style={styles.badgeTitle}>{statusHeadline}</Text>
             <Text style={[styles.badgeSubtitle, errorMessage ? styles.errorText : null]}>
-              {statusText}
+              {hasEpisode
+                ? statusText
+                : isInitialLoading
+                  && 'Checking for your brief...'
+                  // : "Paperboy hasn't arrived yet.\nCheck back soon."
+                  }
             </Text>
           </View>
 
-          <View style={styles.playRow}>
-            <TouchableOpacity
-              style={[styles.playButton, (isBusy || !audioUrl) && styles.playButtonDisabled]}
-              activeOpacity={0.9}
-              accessibilityRole="button"
-              accessibilityLabel="Play daily briefing"
-              onPress={handlePlayPress}
-              disabled={isBusy || !audioUrl}
-            >
-              {isBusy ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Ionicons name={isPlaying ? 'pause' : 'play'} size={20} color="#ffffff" />
-              )}
-            </TouchableOpacity>
-            <Text style={styles.playLabel}>{isPlaying ? 'Pause the brief' : 'Listen now'}</Text>
-          </View>
+          {hasEpisode ? (
+            <View style={styles.playRow}>
+              <TouchableOpacity
+                style={[styles.playButton, isBusy && styles.playButtonDisabled]}
+                activeOpacity={0.9}
+                accessibilityRole="button"
+                accessibilityLabel="Play daily briefing"
+                onPress={handlePlayPress}
+                disabled={isBusy}
+              >
+                {isBusy ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Ionicons name={isPlaying ? 'pause' : 'play'} size={20} color="#ffffff" />
+                )}
+              </TouchableOpacity>
+              <Text style={styles.playLabel}>{isPlaying ? 'Pause the brief' : 'Listen now'}</Text>
+            </View>
+          ) : null}
         </View>
-
+        {hasEpisode &&
         <View style={styles.statsRow}>
           <View style={styles.statBlock}>
             <Text style={styles.statValue}>7-10 min</Text>
@@ -245,7 +265,7 @@ export default function TodayScreen() {
             <Text style={styles.statValue}>Calm</Text>
             <Text style={styles.statLabel}>VOICE</Text>
           </View>
-        </View>
+        </View>}
 
         {/* <View style={styles.summaryCard} accessibilityRole="summary">
           <Text style={styles.summaryTitle}>{podcastScript ? "Today's script" : 'About the briefing'}</Text>
