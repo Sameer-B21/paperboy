@@ -8,17 +8,18 @@ import { Fonts } from '@/constants/theme';
 import { listEpisodes } from '@/data/backend';
 
 const palette = {
-  background: '#F8FAFC',
-  card: '#FFFFFF',
-  primaryText: '#0F172A',
-  secondaryText: '#94A3B8',
-  accent: '#F6A34D',
-  accentShadow: '#E18A28',
-  pill: '#EEF2F6',
-  border: '#E2E8F0',
+  background: '#F6F1E9',
+  card: '#FBF8F2',
+  surface: '#FDFBF7',
+  primaryText: '#2E2A26',
+  secondaryText: '#8F877C',
+  accent: '#C78B5A',
+  border: '#E7DED3',
+  icon: '#6F675D',
+  glow: '#F0E7DA',
 };
 
-export default function ExploreScreen() {
+export default function ArchiveScreen() {
   const router = useRouter();
   const [episodes, setEpisodes] = useState<
     Array<{
@@ -27,6 +28,7 @@ export default function ExploreScreen() {
       title: string;
       status: string;
       summary: string;
+      createdAt: string;
     }>
   >([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -35,9 +37,7 @@ export default function ExploreScreen() {
     setIsLoading(true);
     try {
       const episodes = await listEpisodes();
-      const digests = episodes.filter((episode) =>
-        episode.sourceMessageId?.startsWith('digest-')
-      );
+      const digests = episodes.filter((episode) => episode.sourceMessageId?.startsWith('digest-'));
       const todayKey = new Date().toDateString();
       const mapped = digests.map((episode) => ({
         id: episode.id,
@@ -70,75 +70,82 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <View style={styles.backgroundGlow} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
         <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.greeting}>Company Logo</Text>
-          </View>
           <TouchableOpacity
             style={styles.iconButton}
             activeOpacity={0.7}
             accessibilityRole="button"
+            accessibilityLabel="Back to today"
+            onPress={() => router.push('/today')}
+          >
+            <Ionicons name="chevron-back" size={20} color={palette.icon} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Archive</Text>
+          <TouchableOpacity
+            style={styles.iconButton}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
             onPress={() => router.push('/settings')}
           >
-            <Ionicons name="settings-outline" size={22} color={palette.secondaryText} />
+            <Ionicons name="settings-outline" size={20} color={palette.icon} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.heroCard}>
-          <Text style={styles.dateText}>Archive</Text>
-          <Text style={styles.title}>Daily briefing library</Text>
+          <Text style={styles.dateText}>Past newsletters</Text>
+          <Text style={styles.title}>Your daily briefing library</Text>
           <Text style={styles.summaryText}>
-            Revisit earlier episodes in the same calm format you listen to each morning. Tap any
-            date to open the full brief.
+            Revisit earlier episodes in the same calm format you listen to each morning.
           </Text>
         </View>
 
         <View style={styles.listHeader}>
-          <Text style={styles.listTitle}>Past daily briefs</Text>
+          <Text style={styles.listTitle}>Saved briefs</Text>
           <View style={styles.metaPill}>
             <Text style={styles.metaText}>{episodes.length} saved</Text>
           </View>
         </View>
-        
 
         {isLoading ? (
           <Text style={styles.summaryText}>Loading briefs...</Text>
         ) : (
           episodes.map((episode) => (
-          <Link
-            key={episode.id}
-            href={{ pathname: '/episodes/[id]', params: { id: episode.id } }}
-            asChild
-          >
-            <TouchableOpacity
-              style={styles.episodeCard}
-              activeOpacity={0.85}
-              accessibilityRole="button"
+            <Link
+              key={episode.id}
+              href={{ pathname: '/episodes/[id]', params: { id: episode.id } }}
+              asChild
             >
-              <View style={styles.episodeHeader}>
-                <Text style={styles.episodeDate}>{episode.dateLabel}</Text>
-                <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
-              </View>
-              <Text style={styles.episodeTitle}>{episode.title}</Text>
-              <View style={styles.metaRow}>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaText}>{episode.status}</Text>
+              <TouchableOpacity
+                style={styles.episodeCard}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+              >
+                <View style={styles.episodeHeader}>
+                  <Text style={styles.episodeDate}>{episode.dateLabel}</Text>
+                  <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
                 </View>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaText}>Auto</Text>
+                <Text style={styles.episodeTitle}>{episode.title}</Text>
+                <View style={styles.metaRow}>
+                  <View style={styles.metaPill}>
+                    <Text style={styles.metaText}>{episode.status}</Text>
+                  </View>
+                  <View style={styles.metaPill}>
+                    <Text style={styles.metaText}>Auto</Text>
+                  </View>
+                  <View style={styles.metaPill}>
+                    <Text style={styles.metaText}>Warm voice</Text>
+                  </View>
                 </View>
-                <View style={styles.metaPill}>
-                  <Text style={styles.metaText}>Warm voice</Text>
-                </View>
-              </View>
-              <Text style={styles.episodeSummary}>{episode.summary}</Text>
-            </TouchableOpacity>
-          </Link>
+                <Text style={styles.episodeSummary}>{episode.summary}</Text>
+              </TouchableOpacity>
+            </Link>
           ))
         )}
       </ScrollView>
@@ -151,58 +158,69 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: palette.background,
   },
+  backgroundGlow: {
+    position: 'absolute',
+    top: -140,
+    right: -100,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: palette.glow,
+    opacity: 0.7,
+  },
   scrollContent: {
-    paddingTop: 26,
+    paddingTop: 16,
     paddingHorizontal: 22,
-    paddingBottom: 70,
+    paddingBottom: 80,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 26,
-  },
-  greeting: {
-    color: palette.secondaryText,
-    fontSize: 15,
-    fontFamily: Fonts.sans,
-    letterSpacing: 0.2,
+    marginBottom: 24,
   },
   headerTitle: {
     color: palette.primaryText,
     fontSize: 20,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    marginTop: 6,
+    fontFamily: Fonts.serif,
+    letterSpacing: 0.4,
   },
   iconButton: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
-    backgroundColor: '#EFF4FB',
+    borderRadius: 12,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   heroCard: {
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    gap: 14,
-    marginBottom: 25,
-    elevation: 4,
+    borderRadius: 22,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    gap: 12,
+    marginBottom: 24,
+    backgroundColor: palette.card,
+    borderWidth: 1,
+    borderColor: palette.border,
+    shadowColor: '#000000',
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 2,
   },
   dateText: {
     color: palette.secondaryText,
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: Fonts.sans,
-    letterSpacing: 0.3,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
   },
   title: {
     color: palette.primaryText,
-    fontSize: 24,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    fontSize: 22,
+    fontFamily: Fonts.serif,
   },
   listHeader: {
     flexDirection: 'row',
@@ -213,8 +231,7 @@ const styles = StyleSheet.create({
   listTitle: {
     color: palette.primaryText,
     fontSize: 18,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
+    fontFamily: Fonts.serif,
   },
   metaRow: {
     flexDirection: 'row',
@@ -223,25 +240,28 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   metaPill: {
-    backgroundColor: palette.pill,
+    backgroundColor: palette.surface,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   metaText: {
-    color: '#475569',
-    fontSize: 13,
+    color: palette.secondaryText,
+    fontSize: 12,
     fontFamily: Fonts.sans,
-    letterSpacing: 0.1,
+    letterSpacing: 0.2,
+    textTransform: 'capitalize',
   },
   summaryText: {
-    color: '#475569',
+    color: palette.secondaryText,
     fontSize: 15,
     lineHeight: 22,
     fontFamily: Fonts.sans,
   },
   episodeCard: {
-    backgroundColor: palette.card,
+    backgroundColor: palette.surface,
     borderRadius: 18,
     padding: 20,
     marginBottom: 14,
@@ -261,15 +281,14 @@ const styles = StyleSheet.create({
   },
   episodeTitle: {
     color: palette.primaryText,
-    fontSize: 20,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
+    fontSize: 18,
+    fontFamily: Fonts.serif,
     marginBottom: 10,
   },
   episodeSummary: {
-    color: '#475569',
-    fontSize: 15,
-    lineHeight: 22,
+    color: palette.secondaryText,
+    fontSize: 14,
+    lineHeight: 20,
     fontFamily: Fonts.sans,
   },
 });

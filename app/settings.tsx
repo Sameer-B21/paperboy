@@ -23,17 +23,16 @@ import {
 import { getUserEmail, getUserId, setUserEmail, setUserId } from '@/data/session';
 
 const palette = {
-  background: '#F8FAFC',
-  card: '#FFFFFF',
-  primaryText: '#0F172A',
-  secondaryText: '#94A3B8',
-  accent: '#F6A34D',
-  accentShadow: '#E18A28',
-  border: '#E2E8F0',
-  pill: '#EEF2F6',
-  spotlight: '#FFE7C8',
-  deep: '#0B1F3A',
-  glow: '#FFD7A8',
+  background: '#F6F1E9',
+  card: '#FBF8F2',
+  surface: '#FDFBF7',
+  primaryText: '#2E2A26',
+  secondaryText: '#8F877C',
+  accent: '#C78B5A',
+  accentDark: '#B57846',
+  border: '#E7DED3',
+  icon: '#6F675D',
+  glow: '#F0E7DA',
 };
 
 type Newsletter = {
@@ -253,7 +252,7 @@ export default function SettingsScreen() {
                   accessibilityRole="button"
                   onPress={handleConnectPress}
                 >
-                  <Ionicons name="logo-google" size={18} color="#0B1F3A" />
+                  <Ionicons name="logo-google" size={18} color="#ffffff" />
                   <Text style={styles.connectButtonText}>Connect Gmail</Text>
                 </TouchableOpacity>
                 <Text style={styles.helperText}>
@@ -318,9 +317,9 @@ export default function SettingsScreen() {
                 <Switch
                   value={newsletter.selected}
                   onValueChange={() => toggleNewsletter(newsletter.id)}
-                  trackColor={{ false: '#E2E8F0', true: palette.accent }}
+                  trackColor={{ false: palette.border, true: palette.accent }}
                   thumbColor={newsletter.selected ? '#ffffff' : '#ffffff'}
-                  ios_backgroundColor="#E2E8F0"
+                  ios_backgroundColor={palette.border}
                   disabled={updatingIds.includes(newsletter.id) || !isConnected}
                 />
               </View>
@@ -346,7 +345,7 @@ export default function SettingsScreen() {
             onPress={handleGenerateEpisode}
             disabled={isGenerating || selectedCount === 0}
           >
-            <Ionicons name="play-circle" size={18} color="#0B1F3A" />
+            <Ionicons name="play-circle" size={18} color="#ffffff" />
             <Text style={styles.connectButtonText}>
               {isGenerating ? 'Generating...' : 'Generate new daily digest'}
             </Text>
@@ -395,7 +394,7 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: palette.spotlight,
+    backgroundColor: palette.glow,
     top: -60,
     right: -90,
     opacity: 0.7,
@@ -405,7 +404,7 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: '#FDECCF',
+    backgroundColor: '#EFE3D3',
     top: 120,
     left: -60,
     opacity: 0.5,
@@ -415,7 +414,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 110,
-    backgroundColor: palette.glow,
+    backgroundColor: '#EADCCA',
     bottom: -90,
     right: -60,
     opacity: 0.35,
@@ -441,19 +440,18 @@ const styles = StyleSheet.create({
   title: {
     color: palette.primaryText,
     fontSize: 28,
-    fontFamily: Fonts.sans,
-    fontWeight: '700',
+    fontFamily: Fonts.serif,
     marginTop: 6,
   },
   iconBadge: {
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: '#FFF4E6',
+    backgroundColor: palette.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#FFE1C1',
+    borderColor: palette.border,
   },
   connectionCard: {
     backgroundColor: palette.card,
@@ -473,11 +471,10 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: palette.primaryText,
     fontSize: 18,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
+    fontFamily: Fonts.serif,
   },
   cardSubtitle: {
-    color: '#475569',
+    color: palette.secondaryText,
     fontSize: 14,
     lineHeight: 20,
     fontFamily: Fonts.sans,
@@ -491,25 +488,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: palette.pill,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#CBD5F5',
+    backgroundColor: '#C9B9A6',
   },
   statusDotOn: {
-    backgroundColor: '#34D399',
+    backgroundColor: '#7BB28E',
   },
   statusLabel: {
-    color: '#475569',
+    color: palette.secondaryText,
     fontSize: 12,
     fontFamily: Fonts.sans,
   },
   connectionBody: {
     borderRadius: 14,
-    backgroundColor: '#F8FAFF',
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
     padding: 16,
   },
   connectButton: {
@@ -520,19 +521,19 @@ const styles = StyleSheet.create({
     backgroundColor: palette.accent,
     paddingVertical: 12,
     borderRadius: 12,
-    shadowColor: palette.accentShadow,
+    shadowColor: palette.accentDark,
     shadowOpacity: 0.35,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
   },
   connectButtonText: {
-    color: palette.deep,
+    color: '#ffffff',
     fontSize: 15,
     fontFamily: Fonts.sans,
     fontWeight: '600',
   },
   helperText: {
-    color: '#64748B',
+    color: palette.secondaryText,
     fontSize: 13,
     lineHeight: 18,
     fontFamily: Fonts.sans,
@@ -547,12 +548,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   accountInitials: {
-    color: '#0F172A',
+    color: palette.primaryText,
     fontFamily: Fonts.sans,
     fontWeight: '600',
   },
@@ -566,7 +569,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   accountEmail: {
-    color: '#64748B',
+    color: palette.secondaryText,
     fontSize: 13,
     fontFamily: Fonts.sans,
     marginTop: 2,
@@ -575,10 +578,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: '#EEF4FF',
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   ghostButtonText: {
-    color: '#2563EB',
+    color: palette.accentDark,
     fontSize: 13,
     fontFamily: Fonts.sans,
     fontWeight: '600',
@@ -593,22 +598,23 @@ const styles = StyleSheet.create({
   sectionTitle: {
     color: palette.primaryText,
     fontSize: 18,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
+    fontFamily: Fonts.serif,
   },
   metaPill: {
-    backgroundColor: palette.pill,
+    backgroundColor: palette.surface,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   metaText: {
-    color: '#475569',
+    color: palette.secondaryText,
     fontSize: 12,
     fontFamily: Fonts.sans,
   },
   listCard: {
-    backgroundColor: palette.card,
+    backgroundColor: palette.surface,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: palette.border,
@@ -616,7 +622,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   emptyText: {
-    color: '#64748B',
+    color: palette.secondaryText,
     fontSize: 13,
     fontFamily: Fonts.sans,
   },
@@ -627,7 +633,7 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: palette.border,
   },
   listInfo: {
     flex: 1,
@@ -639,7 +645,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   listDescription: {
-    color: '#64748B',
+    color: palette.secondaryText,
     fontSize: 13,
     lineHeight: 18,
     fontFamily: Fonts.sans,
@@ -648,21 +654,21 @@ const styles = StyleSheet.create({
   cadencePill: {
     alignSelf: 'flex-start',
     marginTop: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: palette.surface,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: palette.border,
   },
   cadenceText: {
-    color: '#475569',
+    color: palette.secondaryText,
     fontSize: 11,
     fontFamily: Fonts.sans,
     letterSpacing: 0.2,
   },
   rulesCard: {
-    backgroundColor: palette.card,
+    backgroundColor: palette.surface,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: palette.border,
@@ -675,7 +681,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: palette.border,
     paddingBottom: 12,
   },
   ruleTitle: {
@@ -685,7 +691,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   ruleSubtitle: {
-    color: '#64748B',
+    color: palette.secondaryText,
     fontSize: 13,
     lineHeight: 18,
     fontFamily: Fonts.sans,
@@ -696,10 +702,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: palette.spotlight,
+    backgroundColor: palette.glow,
   },
   rulePillText: {
-    color: palette.deep,
+    color: palette.primaryText,
     fontSize: 12,
     fontFamily: Fonts.sans,
     fontWeight: '600',
@@ -708,17 +714,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: '#E0F2FE',
+    backgroundColor: '#E9DED1',
   },
   rulePillTextMuted: {
-    color: '#0284C7',
+    color: palette.icon,
     fontSize: 12,
     fontFamily: Fonts.sans,
     fontWeight: '600',
   },
   statusMessage: {
     marginTop: 12,
-    color: '#475569',
+    color: palette.secondaryText,
     fontSize: 13,
     fontFamily: Fonts.sans,
   },

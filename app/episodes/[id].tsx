@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
@@ -10,13 +10,16 @@ import { getEpisode } from '@/data/backend';
 
 
 const palette = {
-  background: '#F8FAFC',
-  card: '#FFFFFF',
-  primaryText: '#0F172A',
-  secondaryText: '#94A3B8',
-  accent: '#F6A34D',
-  accentShadow: '#E18A28',
-  pill: '#EEF2F6',
+  background: '#F6F1E9',
+  card: '#FBF8F2',
+  surface: '#FDFBF7',
+  primaryText: '#2E2A26',
+  secondaryText: '#8F877C',
+  accent: '#C78B5A',
+  accentDark: '#B57846',
+  border: '#E7DED3',
+  icon: '#6F675D',
+  glow: '#F0E7DA',
 };
 
 export default function EpisodeDetailScreen() {
@@ -117,10 +120,12 @@ export default function EpisodeDetailScreen() {
   if (!episode) {
     return (
       <SafeAreaView style={styles.safeArea}>
+        <View style={styles.backgroundGlow} />
+        <View style={styles.backgroundBloom} />
         <View style={styles.notFoundContainer}>
           <Text style={styles.notFoundTitle}>{isLoading ? 'Loading brief...' : 'Brief not found'}</Text>
           <Text style={styles.notFoundText}>
-            {errorMessage ?? 'Pick another date from the explore list.'}
+            {errorMessage ?? 'Pick another date from the archive list.'}
           </Text>
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={18} color={palette.primaryText} />
@@ -140,20 +145,27 @@ export default function EpisodeDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <View style={styles.backgroundGlow} />
+      <View style={styles.backgroundBloom} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
         <View style={styles.headerRow}>
-          <Text style={styles.greeting}>Company Logo</Text>
+          <View style={styles.brandRow}>
+            <View style={styles.logoWrap}>
+              <Image source={require('../../assets/images/icon.png')} style={styles.logoImage} />
+            </View>
+            <Text style={styles.brandText}>NewsletterPodcaster</Text>
+          </View>
           <TouchableOpacity
             style={styles.iconButton}
             activeOpacity={0.7}
             accessibilityRole="button"
             onPress={() => router.back()}
           >
-            <Ionicons name="chevron-back" size={22} color={palette.secondaryText} />
+            <Ionicons name="chevron-back" size={20} color={palette.icon} />
           </TouchableOpacity>
         </View>
 
@@ -210,7 +222,7 @@ export default function EpisodeDetailScreen() {
 
           <View style={styles.progressBlock}>
             <View style={styles.progressBar}>
-              <View style={[styles.progressFill, {width: `${parseFloat(progressWidth)}%` || 0 }]} />
+              <View style={[styles.progressFill, { width: `${parseFloat(progressWidth)}%` || 0 }]} />
             </View>
             <Text style={styles.progressLabel}>{episode.progressLabel}</Text>
           </View>
@@ -230,8 +242,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: palette.background,
   },
+  backgroundGlow: {
+    position: 'absolute',
+    top: -120,
+    right: -80,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: palette.glow,
+    opacity: 0.7,
+  },
+  backgroundBloom: {
+    position: 'absolute',
+    top: 140,
+    left: -120,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: '#EFE3D3',
+    opacity: 0.5,
+  },
   scrollContent: {
-    paddingTop: 26,
+    paddingTop: 16,
     paddingHorizontal: 22,
     paddingBottom: 30,
   },
@@ -241,39 +273,67 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 26,
   },
-  greeting: {
-    color: palette.secondaryText,
-    fontSize: 15,
-    fontFamily: Fonts.sans,
-    letterSpacing: 0.2,
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  iconButton: {
-    width: 32,
-    height: 32,
+  logoWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
-    backgroundColor: '#EFF4FB',
+  },
+  logoImage: {
+    width: 26,
+    height: 26,
+    resizeMode: 'contain',
+  },
+  brandText: {
+    color: palette.primaryText,
+    fontSize: 20,
+    fontFamily: Fonts.serif,
+    letterSpacing: 0.4,
+  },
+  iconButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   heroCard: {
-    borderRadius: 20,
+    borderRadius: 22,
     paddingVertical: 26,
     paddingHorizontal: 22,
     gap: 16,
-    elevation: 4,
+    backgroundColor: palette.card,
+    borderWidth: 1,
+    borderColor: palette.border,
+    shadowColor: '#000000',
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 3,
   },
   dateText: {
     color: palette.secondaryText,
     fontSize: 14,
-    fontFamily: Fonts.sans,
-    letterSpacing: 0.3,
+    fontFamily: Fonts.serif,
+    letterSpacing: 0.4,
   },
   title: {
     color: palette.primaryText,
     fontSize: 26,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    fontFamily: Fonts.serif,
+    letterSpacing: 0.4,
   },
   metaRow: {
     flexDirection: 'row',
@@ -282,13 +342,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   metaPill: {
-    backgroundColor: palette.pill,
+    backgroundColor: palette.surface,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   metaText: {
-    color: '#475569',
+    color: palette.secondaryText,
     fontSize: 13,
     fontFamily: Fonts.sans,
     letterSpacing: 0.1,
@@ -311,7 +373,9 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: palette.pill,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,
@@ -329,7 +393,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: palette.accent,
-    shadowColor: palette.accentShadow,
+    shadowColor: palette.accentDark,
     shadowOpacity: 0.35,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
@@ -341,7 +405,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.sans,
   },
   errorText: {
-    color: '#EF4444',
+    color: '#C0392B',
     fontSize: 13,
     fontFamily: Fonts.sans,
   },
@@ -352,7 +416,7 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 4,
     borderRadius: 999,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: palette.border,
     overflow: 'hidden',
   },
   progressFill: {
@@ -368,24 +432,20 @@ const styles = StyleSheet.create({
   summaryCard: {
     marginTop: 20,
     padding: 22,
-    backgroundColor: palette.card,
+    backgroundColor: palette.surface,
     borderRadius: 18,
     gap: 12,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.05,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   summaryTitle: {
     color: palette.primaryText,
     fontSize: 18,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    fontFamily: Fonts.serif,
+    letterSpacing: 0.4,
   },
   summaryText: {
-    color: '#475569',
+    color: palette.secondaryText,
     fontSize: 16,
     lineHeight: 24,
     fontFamily: Fonts.sans,
@@ -398,9 +458,8 @@ const styles = StyleSheet.create({
   },
   notFoundTitle: {
     color: palette.primaryText,
-    fontSize: 22,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
+    fontSize: 24,
+    fontFamily: Fonts.serif,
   },
   notFoundText: {
     color: palette.secondaryText,
@@ -414,8 +473,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: '#EFF4FB',
+    borderRadius: 12,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
   backButtonText: {
     color: palette.primaryText,

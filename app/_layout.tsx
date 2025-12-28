@@ -3,11 +3,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
+import { Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -15,15 +12,16 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="today" options={{ headerShown: false }} />
+        <Stack.Screen name="archive" options={{ headerShown: false }} />
         <Stack.Screen
           name="settings"
           options={{
             title: 'Settings',
             headerShown: true,
-            headerStyle: { backgroundColor: '#F8FAFC' },
-            headerTintColor: '#0F172A',
-            headerTitleStyle: { fontSize: 18, fontWeight: '600' },
+            headerStyle: { backgroundColor: '#F6F1E9' },
+            headerTintColor: '#2E2A26',
+            headerTitleStyle: { fontSize: 18, fontFamily: Fonts.serif },
             headerShadowVisible: false,
           }}
         />
