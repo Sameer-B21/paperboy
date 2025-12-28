@@ -48,8 +48,12 @@ async function requireUserId(): Promise<string> {
   return userId;
 }
 
-export async function fetchAuthUrl(): Promise<string> {
-  const response = await fetch(`${API_BASE_URL}/auth/google`);
+export async function fetchAuthUrl(redirectUrl?: string): Promise<string> {
+  const url = new URL(`${API_BASE_URL}/auth/google`);
+  if (redirectUrl) {
+    url.searchParams.set('redirect', redirectUrl);
+  }
+  const response = await fetch(url.toString());
   if (!response.ok) {
     throw new Error('Unable to start Gmail auth.');
   }

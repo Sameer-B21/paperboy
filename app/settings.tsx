@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as ExpoLinking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Linking,
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Switch,
@@ -49,11 +50,13 @@ export default function SettingsScreen() {
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [userEmail, setUserEmailState] = useState<string>('');
   const [hasDiscovered, setHasDiscovered] = useState(false);
   const [updatingIds, setUpdatingIds] = useState<string[]>([]);
+  const [hasAppliedParams, setHasAppliedParams] = useState(false);
 
   const selectedCount = useMemo(
     () => newsletters.filter((newsletter) => newsletter.selected).length,
@@ -79,6 +82,7 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     const boot = async () => {
+      setIsInitialLoading(true);
       const storedUserId = await getUserId();
       const storedEmail = await getUserEmail();
       if (storedUserId) {
@@ -89,12 +93,14 @@ export default function SettingsScreen() {
       }
       await loadNewsletters();
       setHasDiscovered(true);
+      setIsInitialLoading(false);
     };
     void boot();
   }, []);
 
   useEffect(() => {
     const applyParams = async () => {
+      setHasAppliedParams(false);
       if (params.userId) {
         await setUserId(params.userId);
         setIsConnected(true);
@@ -104,9 +110,12 @@ export default function SettingsScreen() {
         setUserEmailState(params.email);
       }
       if (params.userId || params.email || params.connected) {
+        setIsInitialLoading(true);
         setHasDiscovered(false);
         await loadNewsletters();
+        setIsInitialLoading(false);
       }
+      setHasAppliedParams(true);
     };
     void applyParams();
   }, [params]);
@@ -150,8 +159,9 @@ export default function SettingsScreen() {
   const handleConnectPress = async () => {
     setStatusMessage(null);
     try {
-      const url = await fetchAuthUrl();
-      await Linking.openURL(url);
+      const redirectUrl = ExpoLinking.createURL('/settings');
+      const url = await fetchAuthUrl(redirectUrl);
+      await ExpoLinking.openURL(url);
       setStatusMessage('Complete Gmail auth, then set EXPO_PUBLIC_USER_ID and refresh.');
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : 'Unable to start Gmail auth.');
@@ -188,6 +198,11 @@ export default function SettingsScreen() {
     }
   };
 
+  const shouldShowLoadingOverlay =
+    (isInitialLoading ||
+      (!!(params.userId || params.email || params.connected) && !hasAppliedParams)) &&
+    newsletters.length === 0;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.backgroundOrbs} pointerEvents="none">
@@ -195,6 +210,12 @@ export default function SettingsScreen() {
         <View style={styles.orbSmall} />
         <View style={styles.orbHighlight} />
       </View>
+      {shouldShowLoadingOverlay ? (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={palette.accent} />
+          <Text style={styles.loadingText}>Loading your newsletters…</Text>
+        </View>
+      ) : null}
       <View style={styles.headerRow}>
           <TouchableOpacity
             style={styles.iconButton}
@@ -322,7 +343,7 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.listCard}>
-          {isLoading ? (
+          {isLoading && newsletters.length === 0 ? (
             <Text style={styles.emptyText}>Loading newsletters…</Text>
           ) : newsletters.length === 0 ? (
             <Text style={styles.emptyText}>No newsletters yet. Run a sync to populate.</Text>
@@ -780,6 +801,23 @@ const styles = StyleSheet.create({
     marginTop: 12,
     color: palette.secondaryText,
     fontSize: 13,
+    fontFamily: Fonts.sans,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(246, 241, 233, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    zIndex: 20,
+  },
+  loadingText: {
+    fontSize: 15,
+    color: palette.primaryText,
     fontFamily: Fonts.sans,
   },
 });
