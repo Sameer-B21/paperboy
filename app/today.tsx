@@ -168,6 +168,19 @@ export default function TodayScreen() {
   const showEmpty = !isInitialLoading && !hasEpisode;
   const statusHeadline = hasEpisode ? 'Brief is ready' : "Paperboy hasn't arrived yet";
 
+  if (isInitialLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <View style={styles.backgroundGlow} />
+        <View style={styles.backgroundBloom} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={palette.icon} />
+          <Text style={styles.loadingText}>Finding your today's brief</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <View style={styles.backgroundGlow} />
@@ -305,6 +318,19 @@ const styles = StyleSheet.create({
     borderRadius: 140,
     backgroundColor: '#EFE3D3',
     opacity: 0.5,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 24,
+  },
+  loadingText: {
+    color: palette.secondaryText,
+    fontSize: 16,
+    fontFamily: Fonts.sans,
+    textAlign: 'center',
   },
   scrollContent: {
     paddingTop: 16,

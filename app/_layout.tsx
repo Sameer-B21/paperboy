@@ -10,12 +10,11 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="today" options={{ headerShown: false }} />
-        <Stack.Screen name="archive" options={{ headerShown: false }} />
-        
-        <Stack.Screen name="settings" options={{ headerShown: false }} />
-        <Stack.Screen name="episodes/[id]" options={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+        <Stack.Screen name="today" />
+        <Stack.Screen name="archive" />
+        <Stack.Screen name="settings" />
+        <Stack.Screen name="episodes/[id]" />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />
