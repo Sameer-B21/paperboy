@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
 import {
@@ -46,6 +46,7 @@ type Newsletter = {
 export default function SettingsScreen() {
   const params = useLocalSearchParams<{ userId?: string; email?: string; connected?: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [isConnected, setIsConnected] = useState(false);
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -204,7 +205,7 @@ export default function SettingsScreen() {
     newsletters.length === 0;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <View style={styles.backgroundOrbs} pointerEvents="none">
         <View style={styles.orbLarge} />
         <View style={styles.orbSmall} />
@@ -216,7 +217,7 @@ export default function SettingsScreen() {
           <Text style={styles.loadingText}>Loading your newsletters…</Text>
         </View>
       ) : null}
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, { paddingTop: insets.top + 16 }]}>
           <TouchableOpacity
             style={styles.iconButton}
             activeOpacity={0.7}

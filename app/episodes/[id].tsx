@@ -3,7 +3,7 @@ import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
 import { getEpisode } from '@/data/backend';
@@ -25,6 +25,7 @@ const palette = {
 export default function EpisodeDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const insets = useSafeAreaInsets();
   const [isPlaying, setIsPlaying] = useState(false);
   const [episode, setEpisode] = useState<{
     id: string;
@@ -119,10 +120,10 @@ export default function EpisodeDetailScreen() {
 
   if (!episode) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.backgroundGlow} />
         <View style={styles.backgroundBloom} />
-        <View style={styles.notFoundContainer}>
+        <View style={[styles.notFoundContainer, { paddingTop: insets.top + 24 }]}>
           <Text style={styles.notFoundTitle}>{isLoading ? 'Loading brief...' : 'Brief not found'}</Text>
           <Text style={styles.notFoundText}>
             {errorMessage ?? 'Pick another date from the archive list.'}
@@ -144,7 +145,7 @@ export default function EpisodeDetailScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <View style={styles.backgroundGlow} />
       <View style={styles.backgroundBloom} />
       <ScrollView
@@ -152,7 +153,7 @@ export default function EpisodeDetailScreen() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, { paddingTop: insets.top + 16 }]}>
           <View style={styles.brandRow}>
             <View style={styles.logoWrap}>
               <Image source={require('../../assets/images/icon.png')} style={styles.logoImage} />
@@ -263,7 +264,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   scrollContent: {
-    paddingTop: 16,
+    paddingTop: 0,
     paddingHorizontal: 22,
     paddingBottom: 30,
   },

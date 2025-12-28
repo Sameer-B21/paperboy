@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
 import { getLatestDailyEpisode } from '@/data/backend';
@@ -32,6 +32,7 @@ const brandName = 'Paperboy';
 
 export default function TodayScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackStatus, setPlaybackStatus] = useState<
@@ -168,10 +169,10 @@ export default function TodayScreen() {
   const statusHeadline = hasEpisode ? 'Brief is ready' : "Paperboy hasn't arrived yet";
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <View style={styles.backgroundGlow} />
       <View style={styles.backgroundBloom} />
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, { paddingTop: insets.top + 16 }]}>
           <View style={styles.brandRow}>
             {/* <View style={styles.logoWrap}> */}
               <Image source={require('../assets/images/paperboy-logo.png')} style={styles.logoImage} />

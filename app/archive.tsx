@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
 import { listEpisodes } from '@/data/backend';
@@ -21,6 +21,7 @@ const palette = {
 
 export default function ArchiveScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [episodes, setEpisodes] = useState<
     Array<{
       id: string;
@@ -69,9 +70,9 @@ export default function ArchiveScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <View style={styles.backgroundGlow} />
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, { paddingTop: insets.top + 16 }]}>
           <TouchableOpacity
             style={styles.iconButton}
             activeOpacity={0.7}
