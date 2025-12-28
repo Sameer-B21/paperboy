@@ -195,18 +195,40 @@ export default function SettingsScreen() {
         <View style={styles.orbSmall} />
         <View style={styles.orbHighlight} />
       </View>
+      <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Back to today"
+            onPress={() => router.push('/today')}
+          >
+            <Ionicons name="chevron-back" size={25} color={palette.icon} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Settings</Text>
+          <View style={styles.headerSpacer} />
+          {/* <TouchableOpacity
+            style={styles.iconButton}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            onPress={() => router.push('/settings')}
+          >
+            <Ionicons name="settings-outline" size={20} color={palette.icon} />
+          </TouchableOpacity> */}
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        <View style={styles.headerRow}>
+        {/* <View style={styles.headerRow}>
           <View>
             <Text style={styles.kicker}>Settings</Text>
             <Text style={styles.title}>Newsletter connections</Text>
           </View>
-        </View>
+        </View> */}
 
         <View style={styles.connectionCard}>
           <View style={styles.connectionHeader}>
@@ -425,11 +447,43 @@ const styles = StyleSheet.create({
     paddingBottom: 90,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
+      // flexDirection: 'row',
+      // alignItems: 'center',
+      // justifyContent: 'space-between',
+      // marginBottom: 24,
+      paddingVertical: 16,
+      backgroundColor: palette.card,
+      paddingHorizontal: 22,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 24,
+      // shadowColor: '#000000',
+      // shadowOpacity: 0.06,
+      // shadowRadius: 18,
+      // shadowOffset: { width: 0, height: 12 },
+    },
+    headerTitle: {
+      color: palette.primaryText,
+      fontSize: 20,
+      fontFamily: Fonts.serif,
+      letterSpacing: 0.4,
+      textAlign: 'center',
+      flex: 1,
+    },
+    headerSpacer: {
+      width: 36,
+    },
+    iconButton: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 12,
+      // backgroundColor: palette.surface,
+      // borderWidth: 1,
+      // borderColor: palette.border,
+    },
   kicker: {
     color: palette.secondaryText,
     fontSize: 13,

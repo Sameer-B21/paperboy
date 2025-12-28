@@ -71,12 +71,7 @@ export default function ArchiveScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.backgroundGlow} />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        <View style={styles.headerRow}>
+      <View style={styles.headerRow}>
           <TouchableOpacity
             style={styles.iconButton}
             activeOpacity={0.7}
@@ -84,10 +79,11 @@ export default function ArchiveScreen() {
             accessibilityLabel="Back to today"
             onPress={() => router.push('/today')}
           >
-            <Ionicons name="chevron-back" size={20} color={palette.icon} />
+            <Ionicons name="chevron-back" size={25} color={palette.icon} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Archive</Text>
-          <TouchableOpacity
+          <View style={styles.headerSpacer} />
+          {/* <TouchableOpacity
             style={styles.iconButton}
             activeOpacity={0.7}
             accessibilityRole="button"
@@ -95,16 +91,22 @@ export default function ArchiveScreen() {
             onPress={() => router.push('/settings')}
           >
             <Ionicons name="settings-outline" size={20} color={palette.icon} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        
 
-        <View style={styles.heroCard}>
+        {/* <View style={styles.heroCard}>
           <Text style={styles.dateText}>Past newsletters</Text>
           <Text style={styles.title}>Your daily briefing library</Text>
           <Text style={styles.summaryText}>
             Revisit earlier episodes in the same calm format you listen to each morning.
           </Text>
-        </View>
+        </View> */}
 
         <View style={styles.listHeader}>
           <Text style={styles.listTitle}>Saved briefs</Text>
@@ -143,7 +145,7 @@ export default function ArchiveScreen() {
                     <Text style={styles.metaText}>Warm voice</Text>
                   </View>
                 </View>
-                <Text style={styles.episodeSummary}>{episode.summary}</Text>
+                {/* <Text style={styles.episodeSummary}>{episode.summary}</Text> */}
               </TouchableOpacity>
             </Link>
           ))
@@ -174,16 +176,32 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   headerRow: {
+    // flexDirection: 'row',
+    // alignItems: 'center',
+    // justifyContent: 'space-between',
+    // marginBottom: 24,
+    paddingVertical: 16,
+    backgroundColor: palette.card,
+    paddingHorizontal: 22,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 24,
+    // shadowColor: '#000000',
+    // shadowOpacity: 0.06,
+    // shadowRadius: 18,
+    // shadowOffset: { width: 0, height: 12 },
   },
   headerTitle: {
     color: palette.primaryText,
     fontSize: 20,
     fontFamily: Fonts.serif,
     letterSpacing: 0.4,
+    textAlign: 'center',
+    flex: 1,
+  },
+  headerSpacer: {
+    width: 36,
   },
   iconButton: {
     width: 36,
@@ -191,9 +209,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
+    // backgroundColor: palette.surface,
+    // borderWidth: 1,
+    // borderColor: palette.border,
   },
   heroCard: {
     borderRadius: 22,
