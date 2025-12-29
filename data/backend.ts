@@ -25,6 +25,7 @@ type EpisodeDetail = {
   script: string | null;
   status: string;
   audioUrl: string | null;
+  audioDurationSeconds: number | null;
   createdAt: string;
 };
 

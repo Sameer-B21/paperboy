@@ -1,6 +1,7 @@
 import { updateEpisode } from "../../db/queries/episodes.sql.js";
 import { uploadAudio } from "../../services/storage/uploadAudio.js";
 import { generateAudio } from "../../services/tts/generateAudio.js";
+import { getAudioDurationSeconds } from "../../utils/audio.js";
 
 //function to generate episode audio from script
 export async function generateEpisodeAudio(payload: {
@@ -8,10 +9,12 @@ export async function generateEpisodeAudio(payload: {
   script: string;
 }): Promise<string> {
   const audioBuffer = await generateAudio(payload.script);
+  const audioDurationSeconds = await getAudioDurationSeconds(audioBuffer);
   const audioPath = await uploadAudio(payload.episodeId, audioBuffer);
 
   await updateEpisode(payload.episodeId, {
     audioPath,
+    audioDurationSeconds,
   });
 
   return audioPath;

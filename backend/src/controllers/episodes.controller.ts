@@ -56,6 +56,7 @@ export async function getEpisode(req: Request, res: Response) {
     audioUrl: episode.audioPath
       ? `${env.BASE_URL}/episodes/${episode.id}/audio?userId=${encodeURIComponent(userId)}`
       : null,
+    audioDurationSeconds: episode.audioDurationSeconds,
     createdAt: episode.createdAt,
   });
 }
@@ -99,6 +100,7 @@ export async function generateDailyEpisode(req: Request, res: Response) {
     audioUrl: episode.audioPath
       ? `${env.BASE_URL}/episodes/${episode.id}/audio?userId=${encodeURIComponent(userId)}`
       : null,
+    audioDurationSeconds: episode.audioDurationSeconds,
     createdAt: episode.createdAt,
   });
 }
@@ -121,6 +123,7 @@ export async function getLatestDailyEpisode(req: Request, res: Response) {
     audioUrl: episode.audioPath
       ? `${env.BASE_URL}/episodes/${episode.id}/audio?userId=${encodeURIComponent(userId)}`
       : null,
+    audioDurationSeconds: episode.audioDurationSeconds,
     createdAt: episode.createdAt,
   });
 }

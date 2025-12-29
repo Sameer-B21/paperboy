@@ -37,6 +37,7 @@ export type Episode = {
   summary: string | null;
   script: string | null;
   audioPath: string | null;
+  audioDurationSeconds: number | null;
   status: "queued" | "completed" | "failed";
   sourceMessageId: string | null;
   createdAt: string;

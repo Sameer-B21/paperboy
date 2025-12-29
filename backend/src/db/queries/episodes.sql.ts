@@ -12,6 +12,7 @@ type EpisodeRow = {
   summary: string | null;
   script: string | null;
   audio_path: string | null;
+  audio_duration_seconds: number | null;
   status: Episode["status"];
   source_message_id: string | null;
   created_at: string;
@@ -29,6 +30,7 @@ function toEpisode(row: EpisodeRow): Episode {
     summary: row.summary,
     script: row.script,
     audioPath: row.audio_path,
+    audioDurationSeconds: row.audio_duration_seconds,
     status: row.status,
     sourceMessageId: row.source_message_id,
     createdAt: row.created_at,
@@ -69,12 +71,15 @@ export async function createEpisode(payload: {
 // Updates an existing episode record in the database
 export async function updateEpisode(
   episodeId: string,
-  updates: Partial<Pick<Episode, "summary" | "script" | "audioPath" | "status" | "body" | "subject">>
+  updates: Partial<
+    Pick<Episode, "summary" | "script" | "audioPath" | "audioDurationSeconds" | "status" | "body" | "subject">
+  >
 ): Promise<Episode> {
   const updatePayload: {
     summary?: string | null;
     script?: string | null;
     audio_path?: string | null;
+    audio_duration_seconds?: number | null;
     status?: Episode["status"];
     body?: string | null;
     subject?: string;
@@ -90,6 +95,9 @@ export async function updateEpisode(
   }
   if (updates.audioPath !== undefined) {
     updatePayload.audio_path = updates.audioPath;
+  }
+  if (updates.audioDurationSeconds !== undefined) {
+    updatePayload.audio_duration_seconds = updates.audioDurationSeconds;
   }
   if (updates.status !== undefined) {
     updatePayload.status = updates.status;

@@ -10,6 +10,7 @@ import { listUsers } from "../../db/queries/users.sql.js";
 import { uploadAudio } from "../../services/storage/uploadAudio.js";
 import { buildDailyDigestScript } from "../../services/summarize/chatgptDigest.js";
 import { generateAudio } from "../../services/tts/generateAudio.js";
+import { getAudioDurationSeconds } from "../../utils/audio.js";
 import { logger } from "../../utils/logger.js";
 
 //outputs date in a standard format for the digest title
@@ -75,6 +76,7 @@ export async function runDailyDigestForUser(
         `There were no newsletters to summarize for ${dateLabel}. ` +
         "Sync your inbox and try again later.",
       audioPath: null,
+      audioDurationSeconds: null,
     });
     return digestEpisode.id;
   }
@@ -129,6 +131,7 @@ export async function runDailyDigestForUser(
         `There were no newsletters to summarize for ${dateLabel}. ` +
         "Sync your inbox and try again later.",
       audioPath: null,
+      audioDurationSeconds: null,
     });
     return digestEpisode.id;
   }
@@ -151,6 +154,7 @@ export async function runDailyDigestForUser(
       summary: null,
       script: null,
       audioPath: null,
+      audioDurationSeconds: null,
     });
   }
 
@@ -160,8 +164,10 @@ export async function runDailyDigestForUser(
     await updateEpisode(digestEpisode.id, { summary, script });
 
     // Generate audio and upload
-    const audioPath = await uploadAudio(digestEpisode.id, await generateAudio(script));
-    await updateEpisode(digestEpisode.id, { audioPath });
+    const audioBuffer = await generateAudio(script);
+    const audioDurationSeconds = await getAudioDurationSeconds(audioBuffer);
+    const audioPath = await uploadAudio(digestEpisode.id, audioBuffer);
+    await updateEpisode(digestEpisode.id, { audioPath, audioDurationSeconds });
   } catch (error) {
     logger.error("Daily digest failed", { error });
   }

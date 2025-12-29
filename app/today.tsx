@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Audio } from 'expo-av';
+import { Audio, type AVPlaybackStatus } from 'expo-av';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -44,8 +44,15 @@ export default function TodayScreen() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [episodeTitle, setEpisodeTitle] = useState<string>('Your Morning Brief');
   const [loadingMessage, setLoadingMessage] = useState<string>("Finding today's brief");
+  const [playbackPosition, setPlaybackPosition] = useState(0);
+  const [playbackDuration, setPlaybackDuration] = useState(0);
+  const [isDurationReady, setIsDurationReady] = useState(false);
+  const [hasFinished, setHasFinished] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
   const audioUrlRef = useRef<string | null>(null);
+  const seekInFlightRef = useRef(false);
+  const hasFinishedRef = useRef(false);
+
 
   const isBusy = playbackStatus === 'ingesting' || playbackStatus === 'generating' || playbackStatus === 'polling';
   const statusText = useMemo(() => {
@@ -83,11 +90,29 @@ export default function TodayScreen() {
     try {
       const sound = await ensureSound(audioUrl);
       const status = await sound.getStatusAsync();
-      if (status.isLoaded && status.isPlaying) {
-        await sound.pauseAsync();
-      } else {
-        await sound.playAsync();
+
+      if (!status.isLoaded) {
+        return;
       }
+      if (status.isPlaying) {
+        setHasFinished(false);
+        await sound.pauseAsync();
+        return;
+      }
+      const duration = playbackDuration ?? 0;
+      const ended =
+      hasFinishedRef.current ||
+      status.didJustFinish ||
+      (duration > 0 && status.positionMillis >= duration);
+
+      // If ended, replay from the start
+      if (ended) {
+        hasFinishedRef.current = false;
+        setHasFinished(false);
+        await sound.replayAsync(); // sets position to 0 and plays
+        return;
+      }
+      await sound.playAsync();
     } catch (error) {
       setPlaybackError(error instanceof Error ? error.message : 'Unable to play audio.');
     }
@@ -97,6 +122,7 @@ export default function TodayScreen() {
     setErrorMessage(null);
     setPlaybackStatus('ingesting');
     setIsInitialLoading(true);
+    setIsDurationReady(false);
     setLoadingMessage("Checking today's brief...");
 
     try {
@@ -113,9 +139,16 @@ export default function TodayScreen() {
         : false;
 
       if (digest && digest.audioUrl && isTodayBrief) {
+        const durationMillis = digest.audioDurationSeconds
+          ? digest.audioDurationSeconds * 1000
+          : 0;
         setPodcastScript(digest.script);
         setAudioUrl(digest.audioUrl);
         setEpisodeTitle(digest.subject);
+        setPlaybackPosition(0);
+        setPlaybackDuration(durationMillis);
+        setIsDurationReady(durationMillis > 0);
+        setHasFinished(false);
         setPlaybackStatus('ready');
         return digest.audioUrl;
       }
@@ -132,14 +165,22 @@ export default function TodayScreen() {
         return null;
       }
 
+      const durationMillis = generated.audioDurationSeconds
+        ? generated.audioDurationSeconds * 1000
+        : 0;
       setPodcastScript(generated.script);
       setAudioUrl(generated.audioUrl);
       setEpisodeTitle(generated.subject);
+      setPlaybackPosition(0);
+      setPlaybackDuration(durationMillis);
+      setIsDurationReady(durationMillis > 0);
+      setHasFinished(false);
       setPlaybackStatus('ready');
       return generated.audioUrl;
     } catch (error) {
       setPlaybackStatus('error');
       setErrorMessage(error instanceof Error ? error.message : 'Something went wrong.');
+      setIsDurationReady(true);
       return null;
     } finally {
       setIsInitialLoading(false);
@@ -161,6 +202,67 @@ export default function TodayScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!audioUrl) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const sound = await ensureSound(audioUrl);
+        const status = await sound.getStatusAsync();
+        if (cancelled) {
+          return;
+        }
+        handlePlaybackStatus(status);
+      } catch {
+        // Ignore preload failures; duration may appear once playback starts.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [audioUrl]);
+
+
+  const handlePlaybackStatus = (status: AVPlaybackStatus) => {
+    if (!status.isLoaded) {
+      return;
+    }
+    setIsPlaying(status.isPlaying);
+    setPlaybackPosition(status.positionMillis);
+    const nextDuration = playbackDuration ?? 0;
+    if (nextDuration > 0) {
+      if (status.isPlaying && status.positionMillis < nextDuration - 500) {
+        setHasFinished(false);
+      }
+      const ended =
+      hasFinishedRef.current ||
+      status.didJustFinish ||
+      (nextDuration > 0 && status.positionMillis >= nextDuration);
+
+      if ((status.didJustFinish || ended) 
+        // && !seekInFlightRef.current
+      ) {
+        hasFinishedRef.current = true;
+        setHasFinished(true);
+        setIsPlaying(false);
+
+        // show the UI as "at the end" (full bar + duration time)
+        setPlaybackPosition(nextDuration);
+
+        // IMPORTANT: stop the sound so it's not stuck in an ended state
+        void soundRef.current?.stopAsync();
+
+        return;
+      }
+      if (status.isPlaying && status.positionMillis < nextDuration - 500) {
+        hasFinishedRef.current = false;
+        setHasFinished(false);
+      }
+    }
+  };
+
   const ensureSound = async (uri: string) => {
     if (soundRef.current && audioUrlRef.current === uri) {
       return soundRef.current;
@@ -172,16 +274,60 @@ export default function TodayScreen() {
     const { sound } = await Audio.Sound.createAsync(
       { uri },
       { shouldPlay: false },
-      (status) => {
-        if (!status.isLoaded) {
-          return;
-        }
-        setIsPlaying(status.isPlaying);
-      }
+      handlePlaybackStatus,
+      true
     );
+    sound.setOnPlaybackStatusUpdate(handlePlaybackStatus);
+    try {
+      const status = await sound.getStatusAsync();
+      handlePlaybackStatus(status);
+    } catch {
+      // Ignore status fetch failures; progress will update once playback starts.
+    }
     soundRef.current = sound;
     audioUrlRef.current = uri;
     return sound;
+  };
+
+  const seekBy = async (offsetMillis: number) => {
+    // Remove or ensure 'duration' is declared and assigned before use
+    if (!audioUrl) {
+      return;
+    }
+    if (seekInFlightRef.current) {
+      return;
+    }
+    seekInFlightRef.current = true;
+    try {
+      const sound = await ensureSound(audioUrl);
+      const status = await sound.getStatusAsync();
+      if (!status.isLoaded) {
+        return;
+      }
+      const duration = playbackDuration;
+      if (!duration || duration <= 0) {
+        return;
+      }
+      if (hasFinished) {
+        setHasFinished(false);
+      }
+      const nextPosition = Math.max(
+        0,
+        Math.min((status.positionMillis ?? 0) + offsetMillis, duration)
+      );
+      await sound.setPositionAsync(nextPosition);
+    } catch {
+      // Ignore transient seek conflicts from rapid taps.
+    } finally {
+      seekInFlightRef.current = false;
+    }
+  };
+
+  const formatTime = (millis: number) => {
+    const totalSeconds = Math.floor(millis / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const todayLabel = new Date().toLocaleDateString(undefined, {
@@ -194,14 +340,18 @@ export default function TodayScreen() {
   const showEmpty = !isInitialLoading && !hasEpisode;
   const statusHeadline = hasEpisode ? 'Your paper is here!' : "Paperboy hasn't arrived yet";
 
-  if (isInitialLoading) {
+  const showLoadingScreen = isInitialLoading || (hasEpisode && !isDurationReady);
+
+  if (showLoadingScreen) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.backgroundGlow} />
         <View style={styles.backgroundBloom} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={palette.icon} />
-          <Text style={styles.loadingText}>{loadingMessage}</Text>
+          <Text style={styles.loadingText}>
+            {isInitialLoading ? loadingMessage : 'Loading your briefing duration...'}
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -272,10 +422,23 @@ export default function TodayScreen() {
                   // : "Paperboy hasn't arrived yet.\nCheck back soon."
                   }
             </Text>
-          </View>
+        </View>
 
-          {hasEpisode ? (
-            <View style={styles.playRow}>
+        {hasEpisode ? (
+          <View style={styles.playRow}>
+            <View style={styles.seekRow}>
+              <TouchableOpacity
+                style={styles.seekButton}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Skip back 10 seconds"
+                onPress={() => seekBy(-10000)}
+                disabled={isBusy}
+              >
+                <Ionicons name="play-back" size={20} color={palette.primaryText} />
+                <Text style={styles.seekLabel}>10s</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={[styles.playButton, isBusy && styles.playButtonDisabled]}
                 activeOpacity={0.9}
@@ -287,17 +450,62 @@ export default function TodayScreen() {
                 {isBusy ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Ionicons name={isPlaying ? 'pause' : 'play'} size={20} color="#ffffff" />
+                  <Ionicons
+                    name={isPlaying ? 'pause' : hasFinished ? 'refresh' : 'play'}
+                    size={20}
+                    color="#ffffff"
+                  />
                 )}
               </TouchableOpacity>
-              <Text style={styles.playLabel}>{isPlaying ? 'Pause the brief' : 'Listen now'}</Text>
+
+              <TouchableOpacity
+                style={styles.seekButton}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Skip forward 10 seconds"
+                onPress={() => seekBy(10000)}
+                disabled={isBusy}
+              >
+                <Ionicons name="play-forward" size={20} color={palette.primaryText} />
+                <Text style={styles.seekLabel}>10s</Text>
+              </TouchableOpacity>
             </View>
-          ) : null}
+            <Text style={styles.playLabel}>
+              {isPlaying ? 'Pause the brief' : hasFinished ? 'Replay the brief' : 'Listen now'}
+            </Text>
+          </View>
+        ) : null}
+
+        {hasEpisode ? (
+          <View style={styles.progressSection}>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width:
+                      playbackDuration > 0
+                        ? `${Math.min(100, (playbackPosition / playbackDuration) * 100)}%`
+                        : '0%',
+                  },
+                ]}
+              />
+            </View>
+            <View style={styles.timeRow}>
+              <Text style={styles.timeText}>{formatTime(playbackPosition)}</Text>
+              <Text style={styles.timeText}>
+                {playbackDuration ? formatTime(playbackDuration) : '--:--'}
+              </Text>
+            </View>
+          </View>
+        ) : null}
         </View>
         {hasEpisode &&
         <View style={styles.statsRow}>
           <View style={styles.statBlock}>
-            <Text style={styles.statValue}>7-10 min</Text>
+            <Text style={styles.statValue}>
+              {playbackDuration ? formatTime(playbackDuration) : '--:--'}
+            </Text>
             <Text style={styles.statLabel}>DURATION</Text>
           </View>
           <View style={styles.statDivider} />
@@ -432,6 +640,7 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
     elevation: 3,
+    width: '80%',
   },
   deliveryEyebrow: {
     color: palette.secondaryText,
@@ -489,6 +698,27 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 18,
   },
+  seekRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  seekButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  seekLabel: {
+    marginTop: 2,
+    color: palette.secondaryText,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+  },
   playButton: {
     width: 56,
     height: 56,
@@ -510,6 +740,33 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: Fonts.sans,
     letterSpacing: 0.3,
+  },
+  progressSection: {
+    marginTop: 18,
+    width: '100%',
+    paddingHorizontal: 4,
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: palette.accent,
+  },
+  timeRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  timeText: {
+    color: palette.secondaryText,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
   },
   statsRow: {
     marginTop: 26,
