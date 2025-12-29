@@ -13,7 +13,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
-import { getLatestDailyEpisode } from '@/data/backend';
+import { generateDailyEpisode, getLatestDailyEpisode } from '@/data/backend';
 
 const palette = {
   background: '#F6F1E9',
@@ -43,6 +43,7 @@ export default function TodayScreen() {
   const [podcastScript, setPodcastScript] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [episodeTitle, setEpisodeTitle] = useState<string>('Your Morning Brief');
+  const [loadingMessage, setLoadingMessage] = useState<string>("Finding today's brief");
   const soundRef = useRef<Audio.Sound | null>(null);
   const audioUrlRef = useRef<string | null>(null);
 
@@ -64,7 +65,7 @@ export default function TodayScreen() {
       case 'ready':
         return 'Your briefing is ready to play.';
       default:
-        return "The brief hasn't arrived yet. Check back soon.";
+        return "Your Paperboy hasn't arrived yet. Check back soon.";
     }
   }, [errorMessage, playbackError, playbackStatus]);
 
@@ -95,10 +96,34 @@ export default function TodayScreen() {
   const loadDailyEpisode = async (): Promise<string | null> => {
     setErrorMessage(null);
     setPlaybackStatus('ingesting');
+    setIsInitialLoading(true);
+    setLoadingMessage("Checking today's brief...");
 
     try {
+      const now = new Date();
+      const dayStart = new Date(now);
+      dayStart.setHours(7, 0, 0, 0);
+      if (now < dayStart) {
+        dayStart.setDate(dayStart.getDate() - 1);
+      }
+
       const digest = await getLatestDailyEpisode();
-      if (!digest || !digest.audioUrl) {
+      const isTodayBrief = digest?.createdAt
+        ? new Date(digest.createdAt) >= dayStart
+        : false;
+
+      if (digest && digest.audioUrl && isTodayBrief) {
+        setPodcastScript(digest.script);
+        setAudioUrl(digest.audioUrl);
+        setEpisodeTitle(digest.subject);
+        setPlaybackStatus('ready');
+        return digest.audioUrl;
+      }
+
+      setPlaybackStatus('generating');
+      setLoadingMessage('Creating your brief...');
+      const generated = await generateDailyEpisode();
+      if (!generated || !generated.audioUrl) {
         setPlaybackStatus('idle');
         setPodcastScript(null);
         setAudioUrl(null);
@@ -106,11 +131,12 @@ export default function TodayScreen() {
         setErrorMessage('No daily brief yet. Check back after 7am.');
         return null;
       }
-      setPodcastScript(digest.script);
-      setAudioUrl(digest.audioUrl);
-      setEpisodeTitle(digest.subject);
+
+      setPodcastScript(generated.script);
+      setAudioUrl(generated.audioUrl);
+      setEpisodeTitle(generated.subject);
       setPlaybackStatus('ready');
-      return digest.audioUrl;
+      return generated.audioUrl;
     } catch (error) {
       setPlaybackStatus('error');
       setErrorMessage(error instanceof Error ? error.message : 'Something went wrong.');
@@ -166,7 +192,7 @@ export default function TodayScreen() {
 
   const hasEpisode = Boolean(audioUrl);
   const showEmpty = !isInitialLoading && !hasEpisode;
-  const statusHeadline = hasEpisode ? 'Brief is ready' : "Paperboy hasn't arrived yet";
+  const statusHeadline = hasEpisode ? 'Your paper is here!' : "Paperboy hasn't arrived yet";
 
   if (isInitialLoading) {
     return (
@@ -175,7 +201,7 @@ export default function TodayScreen() {
         <View style={styles.backgroundBloom} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={palette.icon} />
-          <Text style={styles.loadingText}>Finding your today's brief</Text>
+          <Text style={styles.loadingText}>{loadingMessage}</Text>
         </View>
       </SafeAreaView>
     );
