@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Audio, type AVPlaybackStatus } from 'expo-av';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { type AVPlaybackStatus } from 'expo-av';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +14,12 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
+import {
+  configureAudioMode,
+  ensureSharedSound,
+  getSavedPlaybackPosition,
+  setPlaybackStatusHandler,
+} from '@/data/audioPlayer';
 import { getEpisode } from '@/data/backend';
 
 const palette = {
@@ -32,6 +39,7 @@ const brandName = 'Paperboy';
 
 export default function EpisodeDetailScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const insets = useSafeAreaInsets();
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -53,8 +61,6 @@ export default function EpisodeDetailScreen() {
   const [isDurationReady, setIsDurationReady] = useState(false);
   const [hasFinished, setHasFinished] = useState(false);
   const [isScriptVisible, setIsScriptVisible] = useState(false);
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const audioUrlRef = useRef<string | null>(null);
   const seekInFlightRef = useRef(false);
   const hasFinishedRef = useRef(false);
   const replayGuardRef = useRef(false);
@@ -85,43 +91,7 @@ export default function EpisodeDetailScreen() {
     void loadEpisode();
   }, [id]);
 
-  useEffect(() => {
-    void Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-    return () => {
-      if (soundRef.current) {
-        void soundRef.current.unloadAsync();
-        soundRef.current = null;
-        audioUrlRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!episode?.audioUrl) {
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        if (!episode.audioUrl) {
-          throw new Error('Audio URL is null');
-        }
-        const sound = await ensureSound(episode.audioUrl);
-        const status = await sound.getStatusAsync();
-        if (cancelled) {
-          return;
-        }
-        handlePlaybackStatus(status);
-      } catch {
-        // Ignore preload failures; duration may appear once playback starts.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [episode?.audioUrl]);
-
-  const handlePlaybackStatus = (status: AVPlaybackStatus) => {
+  const handlePlaybackStatus = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) {
       return;
     }
@@ -170,33 +140,65 @@ export default function EpisodeDetailScreen() {
         setHasFinished(false);
       }
     }
-  };
+  }, [playbackDuration, hasFinished]);
 
-  const ensureSound = async (uri: string) => {
-    if (soundRef.current && audioUrlRef.current === uri) {
-      return soundRef.current;
+  useEffect(() => {
+    void configureAudioMode();
+  }, []);
+
+  useEffect(() => {
+    setPlaybackStatusHandler(handlePlaybackStatus);
+    return () => {
+      setPlaybackStatusHandler(null);
+    };
+  }, [handlePlaybackStatus]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (event) => {
+      if (!isPlaying) {
+        return;
+      }
+      event.preventDefault();
+      Alert.alert('Playback in progress', 'Pause the brief before leaving this page.');
+    });
+    return unsubscribe;
+  }, [navigation, isPlaying]);
+
+  useEffect(() => {
+    if (!episode?.audioUrl) {
+      return;
     }
-    if (soundRef.current) {
-      await soundRef.current.unloadAsync();
-      setIsPlaying(false);
-    }
-    const { sound } = await Audio.Sound.createAsync(
-      { uri },
-      { shouldPlay: false },
-      handlePlaybackStatus,
-      true
-    );
-    sound.setOnPlaybackStatusUpdate(handlePlaybackStatus);
-    try {
-      const status = await sound.getStatusAsync();
-      handlePlaybackStatus(status);
-    } catch {
-      // Ignore status fetch failures; progress will update once playback starts.
-    }
-    soundRef.current = sound;
-    audioUrlRef.current = uri;
-    return sound;
-  };
+    let cancelled = false;
+    void (async () => {
+      try {
+        if (!episode.audioUrl) {
+          throw new Error('Audio URL is null');
+        }
+        const sound = await ensureSharedSound(episode.audioUrl);
+        const status = await sound.getStatusAsync();
+        if (cancelled) {
+          return;
+        }
+        handlePlaybackStatus(status);
+        const saved = await getSavedPlaybackPosition(episode.audioUrl);
+        if (
+          saved &&
+          status.isLoaded &&
+          !status.isPlaying &&
+          status.positionMillis < saved.positionMillis - 1000
+        ) {
+          await sound.setPositionAsync(saved.positionMillis);
+          const refreshed = await sound.getStatusAsync();
+          handlePlaybackStatus(refreshed);
+        }
+      } catch {
+        // Ignore preload failures; duration may appear once playback starts.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [episode?.audioUrl, handlePlaybackStatus]);
 
   const handlePlayPress = async () => {
     setPlaybackError(null);
@@ -207,7 +209,7 @@ export default function EpisodeDetailScreen() {
     }
 
     try {
-      const sound = await ensureSound(episode.audioUrl);
+      const sound = await ensureSharedSound(episode.audioUrl);
       const status = await sound.getStatusAsync();
 
       if (!status.isLoaded) {
@@ -255,7 +257,7 @@ export default function EpisodeDetailScreen() {
     }
     seekInFlightRef.current = true;
     try {
-      const sound = await ensureSound(episode.audioUrl);
+      const sound = await ensureSharedSound(episode.audioUrl);
       const status = await sound.getStatusAsync();
       if (!status.isLoaded) {
         return;
@@ -357,7 +359,13 @@ export default function EpisodeDetailScreen() {
             activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel="Back back"
-            onPress={() => router.back()}
+            onPress={() => {
+              if (isPlaying) {
+                Alert.alert('Playback in progress', 'Pause the brief before leaving this page.');
+                return;
+              }
+              router.back();
+            }}
           >
             <Ionicons name="chevron-back" size={25} color={palette.icon} />
           </TouchableOpacity>
