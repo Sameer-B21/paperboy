@@ -1,13 +1,19 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Audio } from 'expo-av';
+import { Audio, type AVPlaybackStatus } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
 import { getEpisode } from '@/data/backend';
-
 
 const palette = {
   background: '#F6F1E9',
@@ -22,10 +28,13 @@ const palette = {
   glow: '#F0E7DA',
 };
 
+const brandName = 'Paperboy';
+
 export default function EpisodeDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const insets = useSafeAreaInsets();
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [episode, setEpisode] = useState<{
     id: string;
@@ -34,55 +43,47 @@ export default function EpisodeDetailScreen() {
     script: string | null;
     status: string;
     audioUrl: string | null;
+    audioDurationSeconds: number | null;
     createdAt: string;
-    progressLabel?: string;
   } | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [playbackPosition, setPlaybackPosition] = useState(0);
+  const [playbackDuration, setPlaybackDuration] = useState(0);
+  const [isDurationReady, setIsDurationReady] = useState(false);
+  const [hasFinished, setHasFinished] = useState(false);
+  const [isScriptVisible, setIsScriptVisible] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
   const audioUrlRef = useRef<string | null>(null);
+  const seekInFlightRef = useRef(false);
+  const hasFinishedRef = useRef(false);
+  const replayGuardRef = useRef(false);
 
   useEffect(() => {
     if (!id) {
       return;
     }
     const loadEpisode = async () => {
-      setIsLoading(true);
+      setIsInitialLoading(true);
       setErrorMessage(null);
       try {
         const detail = await getEpisode(id);
+        const durationMillis = detail.audioDurationSeconds
+          ? detail.audioDurationSeconds * 1000
+          : 0;
         setEpisode(detail);
+        setPlaybackPosition(0);
+        setPlaybackDuration(durationMillis);
+        setIsDurationReady(durationMillis > 0);
+        setHasFinished(false);
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : 'Unable to load brief.');
       } finally {
-        setIsLoading(false);
+        setIsInitialLoading(false);
       }
     };
     void loadEpisode();
   }, [id]);
-
-  const handlePlayPress = async () => {
-
-    setPlaybackError(null);
-
-    if (!episode?.audioUrl) {
-      setPlaybackError('Audio not ready yet.');
-      return;
-    }
-    try {
-
-      const sound = await ensureSound(episode.audioUrl);
-      const status = await sound.getStatusAsync();
-      if (status.isLoaded && status.isPlaying) {
-        await sound.pauseAsync();
-      } else {
-        await sound.playAsync();
-      }
-    } catch (error) {
-      setPlaybackError(error instanceof Error ? error.message : 'Unable to play audio.');
-    }
-  };
 
   useEffect(() => {
     void Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
@@ -95,6 +96,70 @@ export default function EpisodeDetailScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!episode?.audioUrl) {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        if (!episode.audioUrl) {
+          throw new Error('Audio URL is null');
+        }
+        const sound = await ensureSound(episode.audioUrl);
+        const status = await sound.getStatusAsync();
+        if (cancelled) {
+          return;
+        }
+        handlePlaybackStatus(status);
+      } catch {
+        // Ignore preload failures; duration may appear once playback starts.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [episode?.audioUrl]);
+
+  const handlePlaybackStatus = (status: AVPlaybackStatus) => {
+    if (!status.isLoaded) {
+      return;
+    }
+    const nextDuration = playbackDuration ?? 0;
+    if (replayGuardRef.current && nextDuration > 0) {
+      if (status.isPlaying && status.positionMillis < 1000) {
+        replayGuardRef.current = false;
+        hasFinishedRef.current = false;
+        setHasFinished(false);
+      } else if (status.positionMillis >= nextDuration - 250) {
+        return;
+      }
+    }
+    setIsPlaying(status.isPlaying);
+    setPlaybackPosition(status.positionMillis);
+    if (nextDuration > 0) {
+      if (status.isPlaying && status.positionMillis < nextDuration) {
+        setHasFinished(false);
+      }
+      const ended =
+        !replayGuardRef.current &&
+        (hasFinishedRef.current ||
+          status.didJustFinish ||
+          (nextDuration > 0 && status.positionMillis >= nextDuration));
+      if (status.didJustFinish || ended) {
+        hasFinishedRef.current = true;
+        setHasFinished(true);
+        setIsPlaying(false);
+        setPlaybackPosition(nextDuration);
+        return;
+      }
+      if (status.isPlaying && status.positionMillis < nextDuration - 500) {
+        hasFinishedRef.current = false;
+        setHasFinished(false);
+      }
+    }
+  };
+
   const ensureSound = async (uri: string) => {
     if (soundRef.current && audioUrlRef.current === uri) {
       return soundRef.current;
@@ -106,25 +171,118 @@ export default function EpisodeDetailScreen() {
     const { sound } = await Audio.Sound.createAsync(
       { uri },
       { shouldPlay: false },
-      (status) => {
-        if (!status.isLoaded) {
-          return;
-        }
-        setIsPlaying(status.isPlaying);
-      }
+      handlePlaybackStatus,
+      true
     );
+    sound.setOnPlaybackStatusUpdate(handlePlaybackStatus);
+    try {
+      const status = await sound.getStatusAsync();
+      handlePlaybackStatus(status);
+    } catch {
+      // Ignore status fetch failures; progress will update once playback starts.
+    }
     soundRef.current = sound;
     audioUrlRef.current = uri;
     return sound;
   };
 
-  if (!episode) {
+  const handlePlayPress = async () => {
+    setPlaybackError(null);
+
+    if (!episode?.audioUrl) {
+      setPlaybackError('Audio not ready yet.');
+      return;
+    }
+
+    try {
+      const sound = await ensureSound(episode.audioUrl);
+      const status = await sound.getStatusAsync();
+
+      if (!status.isLoaded) {
+        return;
+      }
+      if (status.isPlaying) {
+        setHasFinished(false);
+        await sound.pauseAsync();
+        return;
+      }
+      const duration = playbackDuration ?? 0;
+      const ended =
+        hasFinishedRef.current ||
+        status.didJustFinish ||
+        (duration > 0 && status.positionMillis >= duration);
+
+      if (ended) {
+        hasFinishedRef.current = false;
+        setHasFinished(false);
+        setPlaybackPosition(0);
+        replayGuardRef.current = true;
+        await sound.replayAsync();
+        const replayStatus = await sound.getStatusAsync();
+        handlePlaybackStatus(replayStatus);
+        setIsPlaying(true);
+        return;
+      }
+      await sound.playAsync();
+      setIsPlaying(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to play audio.';
+      if (message.toLowerCase().includes('seeking interrupted')) {
+        return;
+      }
+      setPlaybackError(message);
+    }
+  };
+
+  const seekBy = async (offsetMillis: number) => {
+    if (!episode?.audioUrl) {
+      return;
+    }
+    if (seekInFlightRef.current) {
+      return;
+    }
+    seekInFlightRef.current = true;
+    try {
+      const sound = await ensureSound(episode.audioUrl);
+      const status = await sound.getStatusAsync();
+      if (!status.isLoaded) {
+        return;
+      }
+      const duration = playbackDuration;
+      if (!duration || duration <= 0) {
+        return;
+      }
+      if (hasFinished) {
+        setHasFinished(false);
+        hasFinishedRef.current = false;
+      }
+      const currentPosition = status.positionMillis ?? 0;
+      const nextPosition =
+        offsetMillis < 0 && currentPosition + offsetMillis < 0
+          ? 10
+          : Math.max(0, Math.min(currentPosition + offsetMillis, duration));
+      await sound.setPositionAsync(nextPosition);
+    } catch {
+      // Ignore transient seek conflicts from rapid taps.
+    } finally {
+      seekInFlightRef.current = false;
+    }
+  };
+
+  const formatTime = (millis: number) => {
+    const totalSeconds = Math.floor(millis / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  if (!episode && !isInitialLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={styles.backgroundGlow} />
         <View style={styles.backgroundBloom} />
         <View style={[styles.notFoundContainer, { paddingTop: insets.top + 24 }]}>
-          <Text style={styles.notFoundTitle}>{isLoading ? 'Loading brief...' : 'Brief not found'}</Text>
+          <Text style={styles.notFoundTitle}>Brief not found</Text>
           <Text style={styles.notFoundText}>
             {errorMessage ?? 'Pick another date from the archive list.'}
           </Text>
@@ -137,102 +295,198 @@ export default function EpisodeDetailScreen() {
     );
   }
 
-  const progressWidth = episode.status === 'completed' ? '100%' : '45%';
-  const dateLabel = new Date(episode.createdAt).toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-  });
+  const hasEpisode = Boolean(episode?.audioUrl);
+  const showLoadingScreen = isInitialLoading || (hasEpisode && !isDurationReady);
+  const dateLabel = episode?.createdAt
+    ? new Date(episode.createdAt).toLocaleDateString(undefined, {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      })
+    : '';
+
+  if (showLoadingScreen) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+        <View style={styles.backgroundGlow} />
+        <View style={styles.backgroundBloom} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={palette.icon} />
+          <Text style={styles.loadingText}>
+            {isInitialLoading ? 'Loading your brief...' : 'Loading your briefing duration...'}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <View style={styles.backgroundGlow} />
       <View style={styles.backgroundBloom} />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        <View style={[styles.headerRow, { paddingTop: insets.top + 16 }]}>
-          <View style={styles.brandRow}>
-            <View style={styles.logoWrap}>
-              <Image source={require('../../assets/images/icon.png')} style={styles.logoImage} />
-            </View>
-            <Text style={styles.brandText}>NewsletterPodcaster</Text>
-          </View>
+      {/* <View style={[styles.headerRow, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.brandRow}>
+          <Image source={require('../../assets/images/paperboy-logo.png')} style={styles.logoImage} />
+          <Text style={styles.brandText}>{brandName}</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.iconButton}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          onPress={() => router.back()}
+        >
+          <Ionicons name="chevron-back" size={22} color={palette.icon} />
+        </TouchableOpacity>
+      </View> */}
+      <View style={[styles.headerRow, { paddingTop: insets.top + 16 }]}>
           <TouchableOpacity
             style={styles.iconButton}
             activeOpacity={0.7}
             accessibilityRole="button"
+            accessibilityLabel="Back back"
             onPress={() => router.back()}
           >
-            <Ionicons name="chevron-back" size={20} color={palette.icon} />
+            <Ionicons name="chevron-back" size={25} color={palette.icon} />
           </TouchableOpacity>
-        </View>
+          <Text style={styles.headerTitle}>{dateLabel}</Text>
+          <View style={styles.headerSpacer} />
+      </View>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.deliveryCard}>
+          <Text style={styles.deliveryEyebrow}>{hasEpisode ? 'DELIVERED' : 'NO DELIVERY YET'}</Text>
+          <Text style={styles.deliveryDate}>Daily Newsletter Digest </Text>
+          <View style={styles.divider} />
 
-        <View style={styles.heroCard}>
-          <Text style={styles.dateText}>{dateLabel}</Text>
-          <Text style={styles.title}>{episode.subject}</Text>
-
-          <View style={styles.metaRow}>
-            <View style={styles.metaPill}>
-              <Text style={styles.metaText}>{episode.status}</Text>
+          <View style={styles.statusBadge}>
+            <View style={styles.badgeIcon}>
+              <Ionicons
+                name={hasEpisode ? 'newspaper-outline' : 'bicycle-outline'}
+                size={26}
+                color={palette.icon}
+              />
             </View>
-            <View style={styles.metaPill}>
-              <Text style={styles.metaText}>Auto</Text>
-            </View>
-            <View style={styles.metaPill}>
-              <Text style={styles.metaText}>Warm voice</Text>
-            </View>
-          </View>
-
-          <View style={styles.playSection}>
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={styles.skipButton}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel="Skip back 10 seconds"
-              >
-                <Ionicons name="play-back" size={18} color={palette.primaryText} />
-                <Text style={styles.skipLabel}>10s</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.playButton}
-                activeOpacity={0.9}
-                accessibilityRole="button"
-                onPress={handlePlayPress}
-              >
-                <Ionicons name={isPlaying ? 'pause' : 'play'} size={28} color="#ffffff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.skipButton}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel="Skip forward 10 seconds"
-              >
-                <Ionicons name="play-forward" size={18} color={palette.primaryText} />
-                <Text style={styles.skipLabel}>10s</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.playHint}>
-              {isPlaying ? 'Playing...' : 'Press play to ease into the day'}
+            <Text style={styles.badgeTitle}>
+              {hasEpisode ? 'Your paper is here!' : "Paperboy hasn't arrived yet"}
             </Text>
-            {playbackError ? <Text style={styles.errorText}>{playbackError}</Text> : null}
           </View>
 
-          <View style={styles.progressBlock}>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${parseFloat(progressWidth)}%` || 0 }]} />
+          {hasEpisode ? (
+            <View style={styles.playRow}>
+              <View style={styles.seekRow}>
+                <TouchableOpacity
+                  style={styles.seekButton}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Skip back 10 seconds"
+                  onPress={() => seekBy(-10000)}
+                >
+                  <Ionicons name="play-back" size={20} color={palette.primaryText} />
+                  <Text style={styles.seekLabel}>10s</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.playButton}
+                  activeOpacity={0.9}
+                  accessibilityRole="button"
+                  accessibilityLabel="Play brief"
+                  onPress={handlePlayPress}
+                >
+                  <Ionicons
+                    name={isPlaying ? 'pause' : hasFinished ? 'refresh' : 'play'}
+                    size={20}
+                    color="#ffffff"
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.seekButton, hasFinished && styles.seekButtonDisabled]}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Skip forward 10 seconds"
+                  onPress={() => seekBy(10000)}
+                  disabled={hasFinished}
+                >
+                  <Ionicons name="play-forward" size={20} color={palette.primaryText} />
+                  <Text style={styles.seekLabel}>10s</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.playLabel}>
+                {isPlaying ? 'Pause the brief' : hasFinished ? 'Replay the brief' : 'Listen now'}
+              </Text>
+              {playbackError ? <Text style={styles.errorText}>{playbackError}</Text> : null}
             </View>
-            <Text style={styles.progressLabel}>{episode.progressLabel}</Text>
-          </View>
+          ) : null}
+
+          {hasEpisode ? (
+            <View style={styles.progressSection}>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width:
+                        playbackDuration > 0
+                          ? `${Math.min(100, (playbackPosition / playbackDuration) * 100)}%`
+                          : '0%',
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.timeRow}>
+                <Text style={styles.timeText}>{formatTime(playbackPosition)}</Text>
+                <Text style={styles.timeText}>
+                {playbackDuration
+                ? formatTime(Math.max(0, playbackDuration - playbackPosition))
+                : '--:--'}
+
+                </Text>
+              </View>
+            </View>
+          ) : null}
         </View>
 
-        <View style={styles.summaryCard} accessibilityRole="summary">
-          <Text style={styles.summaryTitle}>Script</Text>
-          <Text style={styles.summaryText}>{episode.script ?? episode.summary ?? 'Processing...'}</Text>
-        </View>
+        {hasEpisode ? (
+          <View style={styles.statsRow}>
+            <View style={styles.statBlock}>
+              <Text style={styles.statValue}>
+                {playbackDuration ? formatTime(playbackDuration) : '--:--'}
+              </Text>
+              <Text style={styles.statLabel}>DURATION</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBlock}>
+              <Text style={styles.statValue}>Warm</Text>
+              <Text style={styles.statLabel}>VOICE</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {episode?.script || episode?.summary ? (
+          <View style={styles.summaryCard} accessibilityRole="summary">
+            <View style={styles.summaryHeaderRow}>
+              <Text style={styles.summaryTitle}>Script</Text>
+              <TouchableOpacity
+                style={styles.summaryToggleButton}
+                accessibilityRole="button"
+                accessibilityLabel={isScriptVisible ? 'Hide script' : 'Show script'}
+                onPress={() => setIsScriptVisible((visible) => !visible)}
+              >
+                <Text style={styles.summaryToggleText}>
+                  {isScriptVisible ? 'Hide' : 'Show'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {isScriptVisible ? (
+              <Text style={styles.summaryText}>
+                {episode.script ?? episode.summary ?? 'Processing...'}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -263,35 +517,53 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFE3D3',
     opacity: 0.5,
   },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 24,
+  },
+  loadingText: {
+    color: palette.secondaryText,
+    fontSize: 16,
+    fontFamily: Fonts.sans,
+    textAlign: 'center',
+  },
+  headerTitle: {
+      color: palette.primaryText,
+      fontSize: 20,
+      fontFamily: Fonts.serif,
+      letterSpacing: 0.4,
+      textAlign: 'center',
+      flex: 1,
+    },
+    headerSpacer: {
+      width: 36,
+    },
   scrollContent: {
-    paddingTop: 0,
-    paddingHorizontal: 22,
-    paddingBottom: 30,
+    paddingTop: 16,
+    paddingBottom: 80,
+    alignItems: 'center',
   },
   headerRow: {
+    paddingVertical: 16,
+    backgroundColor: palette.card,
+    paddingHorizontal: 22,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 26,
+    marginBottom: 24,
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  logoWrap: {
+  logoImage: {
     width: 42,
     height: 42,
     borderRadius: 12,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoImage: {
-    width: 26,
-    height: 26,
     resizeMode: 'contain',
   },
   brandText: {
@@ -306,16 +578,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
   },
-  heroCard: {
-    borderRadius: 22,
-    paddingVertical: 26,
-    paddingHorizontal: 22,
-    gap: 16,
+  deliveryCard: {
     backgroundColor: palette.card,
+    borderRadius: 22,
+    paddingVertical: 28,
+    paddingHorizontal: 22,
     borderWidth: 1,
     borderColor: palette.border,
     shadowColor: '#000000',
@@ -323,132 +591,203 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 12 },
     elevation: 3,
+    width: '80%',
   },
-  dateText: {
+  deliveryEyebrow: {
     color: palette.secondaryText,
-    fontSize: 14,
-    fontFamily: Fonts.serif,
-    letterSpacing: 0.4,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    textAlign: 'center',
   },
-  title: {
+  deliveryDate: {
+    marginTop: 10,
     color: palette.primaryText,
     fontSize: 26,
     fontFamily: Fonts.serif,
+    textAlign: 'center',
     letterSpacing: 0.4,
   },
-  metaRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-    marginBottom: 20,
-  },
-  metaPill: {
-    backgroundColor: palette.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  metaText: {
-    color: palette.secondaryText,
-    fontSize: 13,
+  deliveryTitle: {
+    marginTop: 6,
+    color: palette.primaryText,
+    fontSize: 16,
     fontFamily: Fonts.sans,
-    letterSpacing: 0.1,
+    textAlign: 'center',
   },
-  playSection: {
+  divider: {
+    height: 1,
+    backgroundColor: palette.border,
+    marginVertical: 18,
+    marginHorizontal: 40,
+  },
+  statusBadge: {
     alignItems: 'center',
     gap: 10,
-    paddingTop: 6,
-    marginBottom: 20,
+    paddingVertical: 8,
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '80%',
-    marginTop: 4,
-  },
-  skipButton: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+  badgeIcon: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.border,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
   },
-  skipLabel: {
+  badgeTitle: {
     color: palette.primaryText,
-    fontSize: 11,
+    fontSize: 18,
     fontFamily: Fonts.sans,
-    letterSpacing: 0.2,
+  },
+  playRow: {
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 18,
+  },
+  seekRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  seekButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  seekButtonDisabled: {
+    opacity: 0.45,
+  },
+  seekLabel: {
+    marginTop: 2,
+    color: palette.secondaryText,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
   },
   playButton: {
-    width: 82,
-    height: 82,
-    borderRadius: 41,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: palette.accent,
     shadowColor: palette.accentDark,
     shadowOpacity: 0.35,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 6,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
   },
-  playHint: {
+  playLabel: {
     color: palette.secondaryText,
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: Fonts.sans,
+    letterSpacing: 0.3,
   },
   errorText: {
     color: '#C0392B',
     fontSize: 13,
     fontFamily: Fonts.sans,
   },
-  progressBlock: {
-    gap: 8,
-    paddingTop: 6,
+  progressSection: {
+    marginTop: 18,
+    width: '100%',
+    paddingHorizontal: 4,
   },
-  progressBar: {
-    height: 4,
+  progressTrack: {
+    height: 6,
     borderRadius: 999,
     backgroundColor: palette.border,
+    // borderWidth: 1,
+    // borderColor: palette.border,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
     backgroundColor: palette.accent,
   },
-  progressLabel: {
+  timeRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  timeText: {
     color: palette.secondaryText,
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: Fonts.sans,
-    letterSpacing: 0.2,
+  },
+  statsRow: {
+    marginTop: 26,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 22,
+  },
+  statBlock: {
+    alignItems: 'center',
+  },
+  statValue: {
+    color: palette.primaryText,
+    fontSize: 18,
+    fontFamily: Fonts.serif,
+  },
+  statLabel: {
+    color: palette.secondaryText,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    letterSpacing: 1.6,
+    marginTop: 6,
+  },
+  statDivider: {
+    width: 1,
+    height: 38,
+    backgroundColor: palette.border,
   },
   summaryCard: {
-    marginTop: 20,
-    padding: 22,
+    marginTop: 28,
+    padding: 20,
     backgroundColor: palette.surface,
     borderRadius: 18,
-    gap: 12,
     borderWidth: 1,
     borderColor: palette.border,
+    width: '80%',
+  },
+  summaryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 10,
   },
   summaryTitle: {
     color: palette.primaryText,
     fontSize: 18,
     fontFamily: Fonts.serif,
-    letterSpacing: 0.4,
+  },
+  summaryToggleButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.card,
+  },
+  summaryToggleText: {
+    color: palette.accentDark,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
   summaryText: {
     color: palette.secondaryText,
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 22,
     fontFamily: Fonts.sans,
   },
   notFoundContainer: {

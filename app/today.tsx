@@ -513,7 +513,9 @@ export default function TodayScreen() {
             <View style={styles.timeRow}>
               <Text style={styles.timeText}>{formatTime(playbackPosition)}</Text>
               <Text style={styles.timeText}>
-                {playbackDuration ? formatTime(playbackDuration) : '--:--'}
+                {playbackDuration
+                ? formatTime(Math.max(0, playbackDuration - playbackPosition))
+                : '--:--'}
               </Text>
             </View>
           </View>
@@ -771,9 +773,9 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 6,
     borderRadius: 999,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
+    backgroundColor: palette.border,
+    // borderWidth: 1,
+    // borderColor: palette.border,
     overflow: 'hidden',
   },
   progressFill: {
