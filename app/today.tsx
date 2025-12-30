@@ -323,7 +323,7 @@ export default function TodayScreen() {
       const currentPosition = status.positionMillis ?? 0;
       const nextPosition =
         offsetMillis < 0 && currentPosition + offsetMillis < 0
-          ? 0
+          ? 10
           : Math.max(0, Math.min(currentPosition + offsetMillis, duration));
       await sound.setPositionAsync(nextPosition);
     } catch {
