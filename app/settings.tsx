@@ -45,6 +45,7 @@ type Newsletter = {
 
 export default function SettingsScreen() {
   const params = useLocalSearchParams<{ userId?: string; email?: string; connected?: string }>();
+  const { userId, email, connected } = params;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [isConnected, setIsConnected] = useState(false);
@@ -102,15 +103,15 @@ export default function SettingsScreen() {
   useEffect(() => {
     const applyParams = async () => {
       setHasAppliedParams(false);
-      if (params.userId) {
-        await setUserId(params.userId);
+      if (userId) {
+        await setUserId(userId);
         setIsConnected(true);
       }
-      if (params.email) {
-        await setUserEmail(params.email);
-        setUserEmailState(params.email);
+      if (email) {
+        await setUserEmail(email);
+        setUserEmailState(email);
       }
-      if (params.userId || params.email || params.connected) {
+      if (userId || email || connected) {
         setIsInitialLoading(true);
         setHasDiscovered(false);
         await loadNewsletters();
@@ -119,7 +120,7 @@ export default function SettingsScreen() {
       setHasAppliedParams(true);
     };
     void applyParams();
-  }, [params]);
+  }, [userId, email, connected]);
 
   useEffect(() => {
     if (!isConnected || hasDiscovered) {

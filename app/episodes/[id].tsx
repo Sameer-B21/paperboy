@@ -136,7 +136,19 @@ export default function EpisodeDetailScreen() {
       }
     }
     setIsPlaying(status.isPlaying);
-    setPlaybackPosition(status.positionMillis);
+    setPlaybackPosition((previous) => {
+      if (
+        !status.isPlaying &&
+        status.positionMillis === 0 &&
+        previous > 0 &&
+        !seekInFlightRef.current &&
+        !status.didJustFinish &&
+        !hasFinishedRef.current
+      ) {
+        return previous;
+      }
+      return status.positionMillis;
+    });
     if (nextDuration > 0) {
       if (status.isPlaying && status.positionMillis < nextDuration) {
         setHasFinished(false);
