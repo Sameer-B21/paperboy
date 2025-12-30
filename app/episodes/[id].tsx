@@ -485,8 +485,12 @@ export default function EpisodeDetailScreen() {
                 {episode.script ?? episode.summary ?? 'Processing...'}
               </Text>
             ) : null}
+            {episode?.subject ? (
+              <Text style={styles.summaryMeta}>{episode.subject}</Text>
+            ) : null}
           </View>
         ) : null}
+        
       </ScrollView>
     </SafeAreaView>
   );
@@ -788,6 +792,12 @@ const styles = StyleSheet.create({
     color: palette.secondaryText,
     fontSize: 15,
     lineHeight: 22,
+    fontFamily: Fonts.sans,
+  },
+  summaryMeta: {
+    marginTop: 12,
+    color: palette.secondaryText,
+    fontSize: 13,
     fontFamily: Fonts.sans,
   },
   notFoundContainer: {

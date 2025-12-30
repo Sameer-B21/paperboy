@@ -5,6 +5,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -48,6 +49,7 @@ export default function TodayScreen() {
   const [playbackDuration, setPlaybackDuration] = useState(0);
   const [isDurationReady, setIsDurationReady] = useState(false);
   const [hasFinished, setHasFinished] = useState(false);
+  const [isScriptVisible, setIsScriptVisible] = useState(false);
   const soundRef = useRef<Audio.Sound | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const seekInFlightRef = useRef(false);
@@ -405,10 +407,10 @@ export default function TodayScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      <View
-        style={styles.scrollContent}
-        // showsVerticalScrollIndicator={false}
-        // bounces={false}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
       >
         
 
@@ -536,15 +538,30 @@ export default function TodayScreen() {
           </View>
         </View>}
 
-        {/* <View style={styles.summaryCard} accessibilityRole="summary">
-          <Text style={styles.summaryTitle}>{podcastScript ? "Today's script" : 'About the briefing'}</Text>
-          <Text style={styles.summaryText}>
-            {podcastScript ??
-              "Your Morning Brief distills the day's most important headlines into a calm, seven-minute listen. Each episode blends crisp context, thoughtful insight, and an easygoing narration so you can start your day informed and grounded."}
-          </Text>
-          {episodeTitle ? <Text style={styles.summaryMeta}>{episodeTitle}</Text> : null}
-        </View> */}
-      </View>
+        {podcastScript ? (
+          <View style={styles.summaryCard} accessibilityRole="summary">
+            <View style={styles.summaryHeaderRow}>
+              <Text style={styles.summaryTitle}>Script</Text>
+              <TouchableOpacity
+                style={styles.summaryToggleButton}
+                accessibilityRole="button"
+                accessibilityLabel={isScriptVisible ? 'Hide script' : 'Show script'}
+                onPress={() => setIsScriptVisible((visible) => !visible)}
+              >
+                <Text style={styles.summaryToggleText}>
+                  {isScriptVisible ? 'Hide' : 'Show'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {isScriptVisible ? (
+              <Text style={styles.summaryText}>
+                {podcastScript}
+              </Text>
+            ) : null}
+            {episodeTitle ? <Text style={styles.summaryMeta}>{episodeTitle}</Text> : null}
+          </View>
+        ) : null}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -592,8 +609,8 @@ const styles = StyleSheet.create({
     // paddingHorizontal: 22,
     paddingBottom: 80,
     justifyContent: 'center', // Center items vertically
-    alignItems: 'center',    // Center items horizontally
-    flex: 1,
+    alignItems: 'center', // Center items horizontally
+    flexGrow: 1,
   },
   headerRow: {
     paddingVertical: 16,
@@ -826,12 +843,34 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: palette.border,
+    width: '80%',
+  },
+  summaryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 10,
   },
   summaryTitle: {
     color: palette.primaryText,
     fontSize: 18,
     fontFamily: Fonts.serif,
-    marginBottom: 10,
+  },
+  summaryToggleButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.card,
+  },
+  summaryToggleText: {
+    color: palette.accentDark,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
   summaryText: {
     color: palette.secondaryText,
