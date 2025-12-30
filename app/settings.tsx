@@ -254,24 +254,26 @@ export default function SettingsScreen() {
 
         <View style={styles.connectionCard}>
           <View style={styles.connectionHeader}>
-            <View>
+            <View style={styles.connectionHeaderTop}>
               <Text style={styles.cardTitle}>Gmail inbox</Text>
-              <Text style={styles.cardSubtitle}>
-                Sync newsletters, auto-tag episodes, and keep your sources tidy.
-              </Text>
+              <View style={styles.statusPill}>
+                <View style={[styles.statusDot, isConnected ? styles.statusDotOn : null]} />
+                <Text style={styles.statusLabel}>
+                  {isConnected ? 'Connected' : 'Not connected'}
+                </Text>
+              </View>
             </View>
-            <View style={styles.statusPill}>
-              <View style={[styles.statusDot, isConnected ? styles.statusDotOn : null]} />
-              <Text style={styles.statusLabel}>{isConnected ? 'Connected' : 'Not connected'}</Text>
-            </View>
+            <Text style={styles.cardSubtitle}>
+              Sync newsletters, auto-tag episodes, and keep your sources tidy.
+            </Text>
           </View>
 
           <View style={styles.connectionBody}>
             {isConnected ? (
               <View style={styles.accountRow}>
-                <View style={styles.accountAvatar}>
+                {/* <View style={styles.accountAvatar}>
                   <Text style={styles.accountInitials}>TL</Text>
-                </View>
+                </View> */}
                 <View style={styles.accountMeta}>
                   <Text style={styles.accountName}>Gmail connected</Text>
                   <Text style={styles.accountEmail}>
@@ -307,7 +309,7 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View style={styles.sectionHeader}>
+        {/* <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Step 2 · Discover newsletters</Text>
           <View style={styles.metaPill}>
             <Text style={styles.metaText}>{newsletters.length} found</Text>
@@ -334,10 +336,10 @@ export default function SettingsScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </View> */}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Step 3 · Select newsletters</Text>
+          <Text style={styles.sectionTitle}>Select newsletters</Text>
           <View style={styles.metaPill}>
             <Text style={styles.metaText}>{selectedCount} selected</Text>
           </View>
@@ -349,8 +351,14 @@ export default function SettingsScreen() {
           ) : newsletters.length === 0 ? (
             <Text style={styles.emptyText}>No newsletters yet. Run a sync to populate.</Text>
           ) : (
-            newsletters.map((newsletter) => (
-              <View key={newsletter.id} style={styles.listRow}>
+            newsletters.map((newsletter, index) => (
+              <View
+                key={newsletter.id}
+                style={[
+                  styles.listRow,
+                  index === newsletters.length - 1 ? styles.listRowLast : null,
+                ]}
+              >
                 <View style={styles.listInfo}>
                   <Text style={styles.listTitle}>{newsletter.name}</Text>
                   <Text style={styles.listDescription}>{newsletter.sender}</Text>
@@ -374,13 +382,13 @@ export default function SettingsScreen() {
         {statusMessage ? <Text style={styles.statusMessage}>{statusMessage}</Text> : null}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Step 4 · Generate daily brief</Text>
+          <Text style={styles.sectionTitle}>Generate new brief</Text>
         </View>
 
         <View style={styles.connectionCard}>
           <Text style={styles.cardTitle}>One briefing, every day</Text>
           <Text style={styles.cardSubtitle}>
-            We combine all selected newsletters from the last 24 hours into a single audio brief.
+            Click generate to create a new daily digest episode for today from your selected newsletters.
           </Text>
           <TouchableOpacity
             style={styles.connectButton}
@@ -410,7 +418,7 @@ export default function SettingsScreen() {
               <Text style={styles.rulePillText}>30 days</Text>
             </View>
           </View>
-          <View style={styles.ruleRow}>
+          <View style={[styles.ruleRow, styles.ruleRowLast]}>
             <View>
               <Text style={styles.ruleTitle}>Auto-categorize</Text>
               <Text style={styles.ruleSubtitle}>Tag each brief by topic once imported.</Text>
@@ -464,7 +472,7 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   scrollContent: {
-    paddingTop: 22,
+    // paddingTop: -22,
     paddingHorizontal: 22,
     paddingBottom: 90,
   },
@@ -538,16 +546,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   connectionHeader: {
+    gap: 10,
+    marginBottom: 16,
+  },
+  connectionHeaderTop: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    marginBottom: 16,
   },
   cardTitle: {
     color: palette.primaryText,
     fontSize: 18,
     fontFamily: Fonts.serif,
+    flex: 1,
   },
   cardSubtitle: {
     color: palette.secondaryText,
@@ -555,7 +567,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontFamily: Fonts.sans,
     marginTop: 6,
-    maxWidth: 220,
+    maxWidth: '100%',
+    marginBottom: 16,
   },
   statusPill: {
     flexDirection: 'row',
@@ -711,6 +724,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
   },
+  listRowLast: {
+    borderBottomWidth: 0,
+  },
   listInfo: {
     flex: 1,
   },
@@ -759,6 +775,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: palette.border,
     paddingBottom: 12,
+  },
+  ruleRowLast: {
+    borderBottomWidth: 0,
+    paddingBottom: 0,
   },
   ruleTitle: {
     color: palette.primaryText,
