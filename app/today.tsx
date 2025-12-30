@@ -318,11 +318,13 @@ export default function TodayScreen() {
       }
       if (hasFinished) {
         setHasFinished(false);
+        hasFinishedRef.current = false;
       }
-      const nextPosition = Math.max(
-        0,
-        Math.min((status.positionMillis ?? 0) + offsetMillis, duration)
-      );
+      const currentPosition = status.positionMillis ?? 0;
+      const nextPosition =
+        offsetMillis < 0 && currentPosition + offsetMillis < 0
+          ? 0
+          : Math.max(0, Math.min(currentPosition + offsetMillis, duration));
       await sound.setPositionAsync(nextPosition);
     } catch {
       // Ignore transient seek conflicts from rapid taps.
@@ -467,12 +469,15 @@ export default function TodayScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.seekButton}
+                style={[
+                  styles.seekButton,
+                  hasFinished && styles.seekButtonDisabled,
+                ]}
                 activeOpacity={0.8}
                 accessibilityRole="button"
                 accessibilityLabel="Skip forward 10 seconds"
                 onPress={() => seekBy(10000)}
-                disabled={isBusy}
+                disabled={isBusy || hasFinished}
               >
                 <Ionicons name="play-forward" size={20} color={palette.primaryText} />
                 <Text style={styles.seekLabel}>10s</Text>
@@ -720,6 +725,9 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.border,
+  },
+  seekButtonDisabled: {
+    opacity: 0.45,
   },
   seekLabel: {
     marginTop: 2,
