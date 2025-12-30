@@ -52,6 +52,7 @@ export default function TodayScreen() {
   const audioUrlRef = useRef<string | null>(null);
   const seekInFlightRef = useRef(false);
   const hasFinishedRef = useRef(false);
+  const replayGuardRef = useRef(false);
 
 
   const isBusy = playbackStatus === 'ingesting' || playbackStatus === 'generating' || playbackStatus === 'polling';
@@ -109,10 +110,14 @@ export default function TodayScreen() {
       if (ended) {
         hasFinishedRef.current = false;
         setHasFinished(false);
+        setPlaybackPosition(0);
+        replayGuardRef.current = true;
         await sound.replayAsync(); // sets position to 0 and plays
+        setIsPlaying(true);
         return;
       }
       await sound.playAsync();
+      setIsPlaying(true);
     } catch (error) {
       setPlaybackError(error instanceof Error ? error.message : 'Unable to play audio.');
     }
@@ -233,13 +238,19 @@ export default function TodayScreen() {
     setPlaybackPosition(status.positionMillis);
     const nextDuration = playbackDuration ?? 0;
     if (nextDuration > 0) {
-      if (status.isPlaying && status.positionMillis < nextDuration - 500) {
+      if (replayGuardRef.current && status.isPlaying && status.positionMillis < 1000) {
+        replayGuardRef.current = false;
+        hasFinishedRef.current = false;
+        setHasFinished(false);
+      }
+      if (status.isPlaying && status.positionMillis < nextDuration) {
         setHasFinished(false);
       }
       const ended =
-      hasFinishedRef.current ||
-      status.didJustFinish ||
-      (nextDuration > 0 && status.positionMillis >= nextDuration);
+      !replayGuardRef.current &&
+      (hasFinishedRef.current ||
+        status.didJustFinish ||
+        (nextDuration > 0 && status.positionMillis >= nextDuration));
 
       if ((status.didJustFinish || ended) 
         // && !seekInFlightRef.current
@@ -250,9 +261,6 @@ export default function TodayScreen() {
 
         // show the UI as "at the end" (full bar + duration time)
         setPlaybackPosition(nextDuration);
-
-        // IMPORTANT: stop the sound so it's not stuck in an ended state
-        void soundRef.current?.stopAsync();
 
         return;
       }
@@ -414,14 +422,14 @@ export default function TodayScreen() {
               )}
             </View>
             <Text style={styles.badgeTitle}>{statusHeadline}</Text>
-            <Text style={[styles.badgeSubtitle, errorMessage ? styles.errorText : null]}>
+            {/*<Text style={[styles.badgeSubtitle, errorMessage ? styles.errorText : null]}>
               {hasEpisode
                 ? statusText
                 : isInitialLoading
                   && 'Checking for your brief...'
                   // : "Paperboy hasn't arrived yet.\nCheck back soon."
                   }
-            </Text>
+            </Text>*/}
         </View>
 
         {hasEpisode ? (
