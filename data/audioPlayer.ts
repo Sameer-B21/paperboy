@@ -14,6 +14,7 @@ let currentUrl: string | null = null;
 let statusHandler: ((status: AVPlaybackStatus) => void) | null = null;
 let lastSavedAt = 0;
 let lastSavedPosition = 0;
+let previewSound: Audio.Sound | null = null;
 
 type StoredPlayback = {
   positionMillis: number;
@@ -90,6 +91,57 @@ export async function ensureSharedSound(uri: string): Promise<Audio.Sound> {
   lastSavedAt = 0;
   lastSavedPosition = 0;
   return sound;
+}
+
+export async function stopSharedSound(): Promise<void> {
+  if (!sharedSound) {
+    return;
+  }
+  try {
+    await sharedSound.stopAsync();
+  } catch {
+    // Ignore stop errors on unloaded audio.
+  }
+  try {
+    await sharedSound.unloadAsync();
+  } catch {
+    // Ignore unload errors.
+  }
+  sharedSound = null;
+  currentUrl = null;
+}
+
+export async function stopPreviewSound(): Promise<void> {
+  if (!previewSound) {
+    return;
+  }
+  try {
+    await previewSound.stopAsync();
+  } catch {
+    // Ignore stop errors on unloaded audio.
+  }
+  try {
+    await previewSound.unloadAsync();
+  } catch {
+    // Ignore unload errors.
+  }
+  previewSound = null;
+}
+
+export async function playPreview(uri: string): Promise<void> {
+  await configureAudioMode();
+  await stopSharedSound();
+  await stopPreviewSound();
+  const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
+  previewSound = sound;
+  sound.setOnPlaybackStatusUpdate((status) => {
+    if (!status.isLoaded) {
+      return;
+    }
+    if (status.didJustFinish) {
+      void stopPreviewSound();
+    }
+  });
 }
 
 export async function getSharedStatus(): Promise<AVPlaybackStatus | null> {

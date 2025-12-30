@@ -21,6 +21,7 @@ import {
   getSavedPlaybackPosition,
   getSharedStatus,
   setPlaybackStatusHandler,
+  stopPreviewSound,
 } from '@/data/audioPlayer';
 import { generateDailyEpisode, getLatestDailyEpisode } from '@/data/backend';
 import { getTtsVoice } from '@/data/session';
@@ -110,6 +111,7 @@ export default function TodayScreen() {
     }
 
     try {
+      await stopPreviewSound();
       const sound = await ensureSharedSound(audioUrl);
       const status = await sound.getStatusAsync();
 

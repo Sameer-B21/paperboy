@@ -19,6 +19,7 @@ import {
   ensureSharedSound,
   getSavedPlaybackPosition,
   setPlaybackStatusHandler,
+  stopPreviewSound,
 } from '@/data/audioPlayer';
 import { getEpisode } from '@/data/backend';
 
@@ -223,6 +224,7 @@ export default function EpisodeDetailScreen() {
     }
 
     try {
+      await stopPreviewSound();
       const sound = await ensureSharedSound(episode.audioUrl);
       const status = await sound.getStatusAsync();
 

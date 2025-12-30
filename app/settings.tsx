@@ -1,8 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Audio } from 'expo-av';
 import * as ExpoLinking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -16,7 +15,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { API_BASE_URL } from '@/constants/api';
 import { Fonts } from '@/constants/theme';
-import { configureAudioMode } from '@/data/audioPlayer';
+import { playPreview, stopPreviewSound } from '@/data/audioPlayer';
 import {
   fetchAuthUrl,
   generateDailyEpisode,
@@ -75,10 +74,11 @@ export default function SettingsScreen() {
   const [updatingIds, setUpdatingIds] = useState<string[]>([]);
   const [hasAppliedParams, setHasAppliedParams] = useState(false);
   const [ttsVoice, setTtsVoiceState] = useState<string>('alloy');
+  const [showNewsletters, setShowNewsletters] = useState(false);
+  const [showVoices, setShowVoices] = useState(true);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewVoice, setPreviewVoice] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const previewSoundRef = useRef<Audio.Sound | null>(null);
 
   const selectedCount = useMemo(
     () => newsletters.filter((newsletter) => newsletter.selected).length,
@@ -126,10 +126,7 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     return () => {
-      if (previewSoundRef.current) {
-        void previewSoundRef.current.unloadAsync();
-        previewSoundRef.current = null;
-      }
+      void stopPreviewSound();
     };
   }, []);
 
@@ -238,25 +235,8 @@ export default function SettingsScreen() {
     setIsPreviewLoading(true);
     setPreviewVoice(voice);
     try {
-      await configureAudioMode();
-      if (previewSoundRef.current) {
-        await previewSoundRef.current.unloadAsync();
-        previewSoundRef.current = null;
-      }
       const uri = `${API_BASE_URL}/tts/preview?voice=${encodeURIComponent(voice)}`;
-      const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
-      previewSoundRef.current = sound;
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (!status.isLoaded) {
-          return;
-        }
-        if (status.didJustFinish) {
-          void sound.unloadAsync();
-          if (previewSoundRef.current === sound) {
-            previewSoundRef.current = null;
-          }
-        }
-      });
+      await playPreview(uri);
     } catch (error) {
       setPreviewError(error instanceof Error ? error.message : 'Unable to play voice preview.');
     } finally {
@@ -415,88 +395,112 @@ export default function SettingsScreen() {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Select newsletters</Text>
-          <View style={styles.metaPill}>
-            <Text style={styles.metaText}>{selectedCount} selected</Text>
+          <View style={styles.sectionActions}>
+            <View style={styles.metaPill}>
+              <Text style={styles.metaText}>{selectedCount} selected</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.toggleButton}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={showNewsletters ? 'Hide newsletters' : 'Show newsletters'}
+              onPress={() => setShowNewsletters((prev) => !prev)}
+            >
+              <Text style={styles.toggleButtonText}>{showNewsletters ? 'Hide' : 'Show'}</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.listCard}>
-          {isLoading && newsletters.length === 0 ? (
-            <Text style={styles.emptyText}>Loading newsletters…</Text>
-          ) : newsletters.length === 0 ? (
-            <Text style={styles.emptyText}>No newsletters yet. Run a sync to populate.</Text>
-          ) : (
-            newsletters.map((newsletter, index) => (
-              <View
-                key={newsletter.id}
-                style={[
-                  styles.listRow,
-                  index === newsletters.length - 1 ? styles.listRowLast : null,
-                ]}
-              >
-                <View style={styles.listInfo}>
-                  <Text style={styles.listTitle}>{newsletter.name}</Text>
-                  <Text style={styles.listDescription}>{newsletter.sender}</Text>
-                  <View style={styles.cadencePill}>
-                    <Text style={styles.cadenceText}>Auto-import enabled</Text>
+        {showNewsletters ? (
+          <View style={styles.listCard}>
+            {isLoading && newsletters.length === 0 ? (
+              <Text style={styles.emptyText}>Loading newsletters…</Text>
+            ) : newsletters.length === 0 ? (
+              <Text style={styles.emptyText}>No newsletters yet. Run a sync to populate.</Text>
+            ) : (
+              newsletters.map((newsletter, index) => (
+                <View
+                  key={newsletter.id}
+                  style={[
+                    styles.listRow,
+                    index === newsletters.length - 1 ? styles.listRowLast : null,
+                  ]}
+                >
+                  <View style={styles.listInfo}>
+                    <Text style={styles.listTitle}>{newsletter.name}</Text>
+                    <Text style={styles.listDescription}>{newsletter.sender}</Text>
+                    <View style={styles.cadencePill}>
+                      <Text style={styles.cadenceText}>Auto-import enabled</Text>
+                    </View>
                   </View>
+                  <Switch
+                    value={newsletter.selected}
+                    onValueChange={() => toggleNewsletter(newsletter.id)}
+                    trackColor={{ false: palette.border, true: palette.accent }}
+                    thumbColor={newsletter.selected ? '#ffffff' : '#ffffff'}
+                    ios_backgroundColor={palette.border}
+                    disabled={updatingIds.includes(newsletter.id) || !isConnected}
+                  />
                 </View>
-                <Switch
-                  value={newsletter.selected}
-                  onValueChange={() => toggleNewsletter(newsletter.id)}
-                  trackColor={{ false: palette.border, true: palette.accent }}
-                  thumbColor={newsletter.selected ? '#ffffff' : '#ffffff'}
-                  ios_backgroundColor={palette.border}
-                  disabled={updatingIds.includes(newsletter.id) || !isConnected}
-                />
-              </View>
-            ))
-          )}
-        </View>
+              ))
+            )}
+          </View>
+        ) : null}
 
         {statusMessage ? <Text style={styles.statusMessage}>{statusMessage}</Text> : null}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Narration voice</Text>
+          <TouchableOpacity
+            style={styles.toggleButton}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={showVoices ? 'Hide voice options' : 'Show voice options'}
+            onPress={() => setShowVoices((prev) => !prev)}
+          >
+            <Text style={styles.toggleButtonText}>{showVoices ? 'Hide' : 'Show'}</Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.voiceCard}>
-          <Text style={styles.cardTitle}>Choose your ChatGPT voice</Text>
-          <Text style={styles.cardSubtitle}>
-            This voice is used for newly generated daily briefs.
-          </Text>
-          {isPreviewLoading ? (
-            <Text style={styles.previewText}>
-              Playing {ttsVoiceOptions.find((option) => option.value === previewVoice)?.label ?? 'voice'} preview...
+        {showVoices ? (
+          <View style={styles.voiceCard}>
+            <Text style={styles.cardTitle}>Choose your ChatGPT voice</Text>
+            <Text style={styles.cardSubtitle}>
+              This voice is used for newly generated daily briefs.
             </Text>
-          ) : null}
-          {previewError ? <Text style={styles.previewError}>{previewError}</Text> : null}
-          <View style={styles.voiceOptions}>
-            {ttsVoiceOptions.map((option) => {
-              const isSelected = ttsVoice === option.value;
-              return (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[styles.voiceOption, isSelected ? styles.voiceOptionSelected : null]}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Select ${option.label} voice`}
-                  onPress={() => handleVoiceSelect(option.value)}
-                >
-                  <View style={styles.voiceOptionText}>
-                    <Text style={styles.voiceOptionTitle}>{option.label}</Text>
-                    <Text style={styles.voiceOptionSubtitle}>{option.description}</Text>
-                  </View>
-                  {isSelected ? (
-                    <Ionicons name="checkmark-circle" size={20} color={palette.accent} />
-                  ) : (
-                    <Ionicons name="ellipse-outline" size={20} color={palette.border} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+            {isPreviewLoading ? (
+              <Text style={styles.previewText}>
+                Playing {ttsVoiceOptions.find((option) => option.value === previewVoice)?.label ?? 'voice'} preview...
+              </Text>
+            ) : null}
+            {previewError ? <Text style={styles.previewError}>{previewError}</Text> : null}
+            <View style={styles.voiceOptions}>
+              {ttsVoiceOptions.map((option) => {
+                const isSelected = ttsVoice === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[styles.voiceOption, isSelected ? styles.voiceOptionSelected : null]}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${option.label} voice`}
+                    onPress={() => handleVoiceSelect(option.value)}
+                  >
+                    <View style={styles.voiceOptionText}>
+                      <Text style={styles.voiceOptionTitle}>{option.label}</Text>
+                      <Text style={styles.voiceOptionSubtitle}>{option.description}</Text>
+                    </View>
+                    {isSelected ? (
+                      <Ionicons name="checkmark-circle" size={20} color={palette.accent} />
+                    ) : (
+                      <Ionicons name="ellipse-outline" size={20} color={palette.border} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        </View>
+        ) : null}
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Generate new brief</Text>
@@ -856,6 +860,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 12,
   },
+  sectionActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   sectionTitle: {
     color: palette.primaryText,
     fontSize: 18,
@@ -873,6 +882,20 @@ const styles = StyleSheet.create({
     color: palette.secondaryText,
     fontSize: 12,
     fontFamily: Fonts.sans,
+  },
+  toggleButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.surface,
+  },
+  toggleButtonText: {
+    color: palette.accentDark,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
   },
   listCard: {
     backgroundColor: palette.surface,
