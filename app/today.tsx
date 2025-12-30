@@ -113,6 +113,8 @@ export default function TodayScreen() {
         setPlaybackPosition(0);
         replayGuardRef.current = true;
         await sound.replayAsync(); // sets position to 0 and plays
+        const replayStatus = await sound.getStatusAsync();
+        handlePlaybackStatus(replayStatus);
         setIsPlaying(true);
         return;
       }
@@ -234,15 +236,19 @@ export default function TodayScreen() {
     if (!status.isLoaded) {
       return;
     }
-    setIsPlaying(status.isPlaying);
-    setPlaybackPosition(status.positionMillis);
     const nextDuration = playbackDuration ?? 0;
-    if (nextDuration > 0) {
-      if (replayGuardRef.current && status.isPlaying && status.positionMillis < 1000) {
+    if (replayGuardRef.current && nextDuration > 0) {
+      if (status.isPlaying && status.positionMillis < 1000) {
         replayGuardRef.current = false;
         hasFinishedRef.current = false;
         setHasFinished(false);
+      } else if (status.positionMillis >= nextDuration - 250) {
+        return;
       }
+    }
+    setIsPlaying(status.isPlaying);
+    setPlaybackPosition(status.positionMillis);
+    if (nextDuration > 0) {
       if (status.isPlaying && status.positionMillis < nextDuration) {
         setHasFinished(false);
       }
