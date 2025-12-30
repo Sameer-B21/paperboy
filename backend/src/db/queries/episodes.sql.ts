@@ -11,6 +11,7 @@ type EpisodeRow = {
   body: string | null;
   summary: string | null;
   script: string | null;
+  tts_voice: string | null;
   audio_path: string | null;
   audio_duration_seconds: number | null;
   status: Episode["status"];
@@ -29,6 +30,7 @@ function toEpisode(row: EpisodeRow): Episode {
     body: row.body,
     summary: row.summary,
     script: row.script,
+    voice: row.tts_voice ?? null,
     audioPath: row.audio_path,
     audioDurationSeconds: row.audio_duration_seconds,
     status: row.status,
@@ -45,6 +47,7 @@ export async function createEpisode(payload: {
   subject: string;
   sourceMessageId: string | null;
   body?: string | null;
+  voice?: string | null;
 }): Promise<Episode> {
   const now = new Date().toISOString();
   const { data, error } = await supabase
@@ -55,6 +58,7 @@ export async function createEpisode(payload: {
       title: payload.subject,
       subject: payload.subject,
       body: payload.body ?? null,
+      tts_voice: payload.voice ?? null,
       status: "queued",
       source_message_id: payload.sourceMessageId,
       created_at: now,
@@ -72,12 +76,13 @@ export async function createEpisode(payload: {
 export async function updateEpisode(
   episodeId: string,
   updates: Partial<
-    Pick<Episode, "summary" | "script" | "audioPath" | "audioDurationSeconds" | "status" | "body" | "subject">
+    Pick<Episode, "summary" | "script" | "audioPath" | "audioDurationSeconds" | "status" | "body" | "subject" | "voice">
   >
 ): Promise<Episode> {
   const updatePayload: {
     summary?: string | null;
     script?: string | null;
+    tts_voice?: string | null;
     audio_path?: string | null;
     audio_duration_seconds?: number | null;
     status?: Episode["status"];
@@ -92,6 +97,9 @@ export async function updateEpisode(
   }
   if (updates.script !== undefined) {
     updatePayload.script = updates.script;
+  }
+  if (updates.voice !== undefined) {
+    updatePayload.tts_voice = updates.voice;
   }
   if (updates.audioPath !== undefined) {
     updatePayload.audio_path = updates.audioPath;

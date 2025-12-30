@@ -20,12 +20,13 @@ function formatTtsCost(model: string, charCount: number): string {
 }
 
 // Generate audio with OpenAI's TTS endpoint.
-export async function generateAudio(script: string): Promise<Buffer> {
+export async function generateAudio(script: string, voice?: string): Promise<Buffer> {
   if (!env.OPENAI_API_KEY) {
     throw new Error("Missing OPENAI_API_KEY.");
   }
 
   const model = env.OPENAI_TTS_MODEL ?? "gpt-4o-mini-tts";
+  const selectedVoice = voice?.trim() || env.OPENAI_TTS_VOICE || "alloy";
   const response = await fetch("https://api.openai.com/v1/audio/speech", {
     method: "POST",
     headers: {
@@ -34,7 +35,7 @@ export async function generateAudio(script: string): Promise<Buffer> {
     },
     body: JSON.stringify({
       model,
-      voice: env.OPENAI_TTS_VOICE ?? "alloy",
+      voice: selectedVoice,
       input: script,
       response_format: "mp3",
     }),

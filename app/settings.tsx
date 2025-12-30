@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Audio } from 'expo-av';
 import * as ExpoLinking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -13,7 +14,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { API_BASE_URL } from '@/constants/api';
 import { Fonts } from '@/constants/theme';
+import { configureAudioMode } from '@/data/audioPlayer';
 import {
   fetchAuthUrl,
   generateDailyEpisode,
@@ -21,7 +24,7 @@ import {
   syncGmail,
   updateNewsletterSelection,
 } from '@/data/backend';
-import { getUserEmail, getUserId, setUserEmail, setUserId } from '@/data/session';
+import { getTtsVoice, getUserEmail, getUserId, setTtsVoice, setUserEmail, setUserId } from '@/data/session';
 
 const palette = {
   background: '#F6F1E9',
@@ -43,6 +46,18 @@ type Newsletter = {
   selected: boolean;
 };
 
+const ttsVoiceOptions = [
+  { value: 'alloy', label: 'Alloy', description: 'Balanced and clear.' },
+  { value: 'nova', label: 'Nova', description: 'Bright and lively.' },
+  { value: 'echo', label: 'Echo', description: 'Smooth and steady.' },
+  { value: 'fable', label: 'Fable', description: 'Warm and story-like.' },
+  { value: 'onyx', label: 'Onyx', description: 'Deep and grounded.' },
+  { value: 'shimmer', label: 'Shimmer', description: 'Soft and airy.' },
+  { value: 'ash', label: 'Ash', description: 'Crisp and neutral.' },
+  { value: 'sage', label: 'Sage', description: 'Calm and measured.' },
+  { value: 'coral', label: 'Coral', description: 'Friendly and upbeat.' },
+];
+
 export default function SettingsScreen() {
   const params = useLocalSearchParams<{ userId?: string; email?: string; connected?: string }>();
   const { userId, email, connected } = params;
@@ -59,6 +74,11 @@ export default function SettingsScreen() {
   const [hasDiscovered, setHasDiscovered] = useState(false);
   const [updatingIds, setUpdatingIds] = useState<string[]>([]);
   const [hasAppliedParams, setHasAppliedParams] = useState(false);
+  const [ttsVoice, setTtsVoiceState] = useState<string>('alloy');
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewVoice, setPreviewVoice] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const previewSoundRef = useRef<Audio.Sound | null>(null);
 
   const selectedCount = useMemo(
     () => newsletters.filter((newsletter) => newsletter.selected).length,
@@ -87,17 +107,30 @@ export default function SettingsScreen() {
       setIsInitialLoading(true);
       const storedUserId = await getUserId();
       const storedEmail = await getUserEmail();
+      const storedVoice = await getTtsVoice();
       if (storedUserId) {
         setIsConnected(true);
       }
       if (storedEmail) {
         setUserEmailState(storedEmail);
       }
+      if (storedVoice) {
+        setTtsVoiceState(storedVoice);
+      }
       await loadNewsletters();
       setHasDiscovered(true);
       setIsInitialLoading(false);
     };
     void boot();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (previewSoundRef.current) {
+        void previewSoundRef.current.unloadAsync();
+        previewSoundRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -190,13 +223,54 @@ export default function SettingsScreen() {
     setIsGenerating(true);
     setStatusMessage(null);
     try {
-      await generateDailyEpisode();
+      await generateDailyEpisode(ttsVoice);
       setStatusMessage('Daily brief queued. Check Today in a moment.');
       router.push('/today');
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : 'Unable to generate daily brief.');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const playVoicePreview = async (voice: string) => {
+    setPreviewError(null);
+    setIsPreviewLoading(true);
+    setPreviewVoice(voice);
+    try {
+      await configureAudioMode();
+      if (previewSoundRef.current) {
+        await previewSoundRef.current.unloadAsync();
+        previewSoundRef.current = null;
+      }
+      const uri = `${API_BASE_URL}/tts/preview?voice=${encodeURIComponent(voice)}`;
+      const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
+      previewSoundRef.current = sound;
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (!status.isLoaded) {
+          return;
+        }
+        if (status.didJustFinish) {
+          void sound.unloadAsync();
+          if (previewSoundRef.current === sound) {
+            previewSoundRef.current = null;
+          }
+        }
+      });
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : 'Unable to play voice preview.');
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+
+  const handleVoiceSelect = async (voice: string) => {
+    setTtsVoiceState(voice);
+    void playVoicePreview(voice);
+    try {
+      await setTtsVoice(voice);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : 'Unable to save voice preference.');
     }
   };
 
@@ -383,6 +457,48 @@ export default function SettingsScreen() {
         {statusMessage ? <Text style={styles.statusMessage}>{statusMessage}</Text> : null}
 
         <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Narration voice</Text>
+        </View>
+
+        <View style={styles.voiceCard}>
+          <Text style={styles.cardTitle}>Choose your ChatGPT voice</Text>
+          <Text style={styles.cardSubtitle}>
+            This voice is used for newly generated daily briefs.
+          </Text>
+          {isPreviewLoading ? (
+            <Text style={styles.previewText}>
+              Playing {ttsVoiceOptions.find((option) => option.value === previewVoice)?.label ?? 'voice'} preview...
+            </Text>
+          ) : null}
+          {previewError ? <Text style={styles.previewError}>{previewError}</Text> : null}
+          <View style={styles.voiceOptions}>
+            {ttsVoiceOptions.map((option) => {
+              const isSelected = ttsVoice === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[styles.voiceOption, isSelected ? styles.voiceOptionSelected : null]}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Select ${option.label} voice`}
+                  onPress={() => handleVoiceSelect(option.value)}
+                >
+                  <View style={styles.voiceOptionText}>
+                    <Text style={styles.voiceOptionTitle}>{option.label}</Text>
+                    <Text style={styles.voiceOptionSubtitle}>{option.description}</Text>
+                  </View>
+                  {isSelected ? (
+                    <Ionicons name="checkmark-circle" size={20} color={palette.accent} />
+                  ) : (
+                    <Ionicons name="ellipse-outline" size={20} color={palette.border} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Generate new brief</Text>
         </View>
 
@@ -545,6 +661,61 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.border,
     marginBottom: 20,
+  },
+  voiceCard: {
+    backgroundColor: palette.card,
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: palette.border,
+    marginBottom: 20,
+  },
+  voiceOptions: {
+    gap: 12,
+  },
+  previewText: {
+    color: palette.secondaryText,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    marginBottom: 10,
+  },
+  previewError: {
+    color: '#A34B3F',
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    marginBottom: 10,
+  },
+  voiceOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
+    backgroundColor: palette.surface,
+  },
+  voiceOptionSelected: {
+    borderColor: palette.accent,
+    backgroundColor: '#F4E6D8',
+  },
+  voiceOptionText: {
+    flex: 1,
+  },
+  voiceOptionTitle: {
+    color: palette.primaryText,
+    fontSize: 15,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
+  },
+  voiceOptionSubtitle: {
+    color: palette.secondaryText,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: Fonts.sans,
+    marginTop: 2,
   },
   connectionHeader: {
     gap: 10,

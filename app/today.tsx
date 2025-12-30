@@ -23,6 +23,7 @@ import {
   setPlaybackStatusHandler,
 } from '@/data/audioPlayer';
 import { generateDailyEpisode, getLatestDailyEpisode } from '@/data/backend';
+import { getTtsVoice } from '@/data/session';
 
 const palette = {
   background: '#F6F1E9',
@@ -38,6 +39,17 @@ const palette = {
 };
 
 const brandName = 'Paperboy';
+const voiceLabelByValue: Record<string, string> = {
+  alloy: 'Alloy',
+  nova: 'Nova',
+  echo: 'Echo',
+  fable: 'Fable',
+  onyx: 'Onyx',
+  shimmer: 'Shimmer',
+  ash: 'Ash',
+  sage: 'Sage',
+  coral: 'Coral',
+};
 
 export default function TodayScreen() {
   const router = useRouter();
@@ -58,6 +70,7 @@ export default function TodayScreen() {
   const [isDurationReady, setIsDurationReady] = useState(false);
   const [hasFinished, setHasFinished] = useState(false);
   const [isScriptVisible, setIsScriptVisible] = useState(false);
+  const [episodeVoice, setEpisodeVoice] = useState<string>('alloy');
   const seekInFlightRef = useRef(false);
   const hasFinishedRef = useRef(false);
   const replayGuardRef = useRef(false);
@@ -133,6 +146,10 @@ export default function TodayScreen() {
     }
   };
 
+  const voiceLabel = useMemo(() => {
+    return voiceLabelByValue[episodeVoice] ?? 'Alloy';
+  }, [episodeVoice]);
+
   const loadDailyEpisode = async (): Promise<string | null> => {
     setErrorMessage(null);
     setPlaybackStatus('ingesting');
@@ -141,6 +158,8 @@ export default function TodayScreen() {
     setLoadingMessage("Checking today's brief...");
 
     try {
+      const storedVoice = await getTtsVoice();
+      const resolvedVoice = storedVoice ?? 'alloy';
       const now = new Date();
       const dayStart = new Date(now);
       dayStart.setHours(7, 0, 0, 0);
@@ -160,6 +179,7 @@ export default function TodayScreen() {
         setPodcastScript(digest.script);
         setAudioUrl(digest.audioUrl);
         setEpisodeTitle(digest.subject);
+        setEpisodeVoice(digest.voice ?? resolvedVoice);
         setPlaybackPosition(0);
         setPlaybackDuration(durationMillis);
         setIsDurationReady(durationMillis > 0);
@@ -170,7 +190,7 @@ export default function TodayScreen() {
 
       setPlaybackStatus('generating');
       setLoadingMessage('Creating your brief...');
-      const generated = await generateDailyEpisode();
+      const generated = await generateDailyEpisode(resolvedVoice);
       if (!generated || !generated.audioUrl) {
         setPlaybackStatus('idle');
         setPodcastScript(null);
@@ -186,6 +206,7 @@ export default function TodayScreen() {
       setPodcastScript(generated.script);
       setAudioUrl(generated.audioUrl);
       setEpisodeTitle(generated.subject);
+      setEpisodeVoice(generated.voice ?? resolvedVoice);
       setPlaybackPosition(0);
       setPlaybackDuration(durationMillis);
       setIsDurationReady(durationMillis > 0);
@@ -542,7 +563,7 @@ export default function TodayScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statBlock}>
-            <Text style={styles.statValue}>Calm</Text>
+            <Text style={styles.statValue}>{voiceLabel}</Text>
             <Text style={styles.statLabel}>VOICE</Text>
           </View>
         </View>}

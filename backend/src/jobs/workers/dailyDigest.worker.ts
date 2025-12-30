@@ -12,6 +12,7 @@ import { buildDailyDigestScript } from "../../services/summarize/chatgptDigest.j
 import { generateAudio } from "../../services/tts/generateAudio.js";
 import { getAudioDurationSeconds } from "../../utils/audio.js";
 import { logger } from "../../utils/logger.js";
+import { env } from "../../config/env.js";
 
 //outputs date in a standard format for the digest title
 function formatDateLabel(date: Date): string {
@@ -26,8 +27,9 @@ function formatDateLabel(date: Date): string {
 export async function runDailyDigestForUser(
   userId: string,
   now = new Date(),
-  options: { force?: boolean } = {}
+  options: { force?: boolean; voice?: string } = {}
 ): Promise<string | null> {
+  const resolvedVoice = options.voice?.trim() || env.OPENAI_TTS_VOICE || "alloy";
   // Determine time window (daily schedule uses calendar day, manual uses last 24 hours)
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
@@ -67,6 +69,7 @@ export async function runDailyDigestForUser(
         subject: `Daily Newsletter Digest - ${dateLabel}`,
         sourceMessageId: digestKey,
         body: null,
+        voice: resolvedVoice,
       }));
     await updateEpisode(digestEpisode.id, {
       subject: `Daily Newsletter Digest - ${dateLabel}`,
@@ -77,6 +80,7 @@ export async function runDailyDigestForUser(
         "Sync your inbox and try again later.",
       audioPath: null,
       audioDurationSeconds: null,
+      voice: resolvedVoice,
     });
     return digestEpisode.id;
   }
@@ -122,6 +126,7 @@ export async function runDailyDigestForUser(
         subject: `Daily Newsletter Digest - ${dateLabel}`,
         sourceMessageId: digestKey,
         body: null,
+        voice: resolvedVoice,
       }));
     await updateEpisode(digestEpisode.id, {
       subject: `Daily Newsletter Digest - ${dateLabel}`,
@@ -132,6 +137,7 @@ export async function runDailyDigestForUser(
         "Sync your inbox and try again later.",
       audioPath: null,
       audioDurationSeconds: null,
+      voice: resolvedVoice,
     });
     return digestEpisode.id;
   }
@@ -155,16 +161,17 @@ export async function runDailyDigestForUser(
       script: null,
       audioPath: null,
       audioDurationSeconds: null,
+      voice: resolvedVoice,
     });
   }
 
   try {
     // Build the daily digest script
     const { summary, script } = await buildDailyDigestScript({ dateLabel, items });
-    await updateEpisode(digestEpisode.id, { summary, script });
+    await updateEpisode(digestEpisode.id, { summary, script, voice: resolvedVoice });
 
     // Generate audio and upload
-    const audioBuffer = await generateAudio(script);
+    const audioBuffer = await generateAudio(script, resolvedVoice);
     const audioDurationSeconds = await getAudioDurationSeconds(audioBuffer);
     const audioPath = await uploadAudio(digestEpisode.id, audioBuffer);
     await updateEpisode(digestEpisode.id, { audioPath, audioDurationSeconds });

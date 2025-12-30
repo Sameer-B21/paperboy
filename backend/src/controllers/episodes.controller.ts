@@ -8,6 +8,16 @@ import {
 import { runDailyDigestForUser } from "../jobs/workers/dailyDigest.worker.js";
 import { downloadAudio } from "../services/storage/uploadAudio.js";
 import { AppError } from "../utils/errors.js";
+import { normalizeTtsVoice } from "../utils/tts.js";
+
+function buildEpisodeAudioUrl(episodeId: string, userId: string, cacheKey?: string): string {
+  const url = new URL(`${env.BASE_URL}/episodes/${episodeId}/audio`);
+  url.searchParams.set("userId", userId);
+  if (cacheKey) {
+    url.searchParams.set("v", cacheKey);
+  }
+  return url.toString();
+}
 
 //reads user id from request headers or query parameters and returns it
 function readUserId(req: Request): string {
@@ -26,12 +36,14 @@ function readUserId(req: Request): string {
 //lists episodes for the authenticated user
 export async function listEpisodes(req: Request, res: Response) {
   const userId = readUserId(req);
+  const defaultVoice = env.OPENAI_TTS_VOICE ?? "alloy";
   //get episodes from db
   const episodes = await listEpisodesByUser(userId);
   const payload = episodes.map((episode) => ({
     id: episode.id,
     subject: episode.subject,
     status: episode.status,
+    voice: episode.voice ?? defaultVoice,
     createdAt: episode.createdAt,
     sourceMessageId: episode.sourceMessageId,
   }));
@@ -47,14 +59,16 @@ export async function getEpisode(req: Request, res: Response) {
     res.status(404).json({ error: "Episode not found." });
     return;
   }
+  const defaultVoice = env.OPENAI_TTS_VOICE ?? "alloy";
   res.json({
     id: episode.id,
     subject: episode.subject,
     summary: episode.summary,
     script: episode.script,
     status: episode.status,
+    voice: episode.voice ?? defaultVoice,
     audioUrl: episode.audioPath
-      ? `${env.BASE_URL}/episodes/${episode.id}/audio?userId=${encodeURIComponent(userId)}`
+      ? buildEpisodeAudioUrl(episode.id, userId, episode.updatedAt)
       : null,
     audioDurationSeconds: episode.audioDurationSeconds,
     createdAt: episode.createdAt,
@@ -78,8 +92,12 @@ export async function getEpisodeAudio(req: Request, res: Response) {
 
 export async function generateDailyEpisode(req: Request, res: Response) {
   const userId = readUserId(req);
+  const requestedVoice = normalizeTtsVoice(req.body?.voice);
   const now = new Date();
-  const episodeId = await runDailyDigestForUser(userId, now, { force: true });
+  const episodeId = await runDailyDigestForUser(userId, now, {
+    force: true,
+    voice: requestedVoice,
+  });
   if (!episodeId) {
     res.status(204).send();
     return;
@@ -91,14 +109,16 @@ export async function generateDailyEpisode(req: Request, res: Response) {
     return;
   }
 
+  const defaultVoice = env.OPENAI_TTS_VOICE ?? "alloy";
   res.json({
     id: episode.id,
     subject: episode.subject,
     summary: episode.summary,
     script: episode.script,
     status: episode.status,
+    voice: episode.voice ?? defaultVoice,
     audioUrl: episode.audioPath
-      ? `${env.BASE_URL}/episodes/${episode.id}/audio?userId=${encodeURIComponent(userId)}`
+      ? buildEpisodeAudioUrl(episode.id, userId, episode.updatedAt)
       : null,
     audioDurationSeconds: episode.audioDurationSeconds,
     createdAt: episode.createdAt,
@@ -114,14 +134,16 @@ export async function getLatestDailyEpisode(req: Request, res: Response) {
     res.status(404).json({ error: "Daily brief not found." });
     return;
   }
+  const defaultVoice = env.OPENAI_TTS_VOICE ?? "alloy";
   res.json({
     id: episode.id,
     subject: episode.subject,
     summary: episode.summary,
     script: episode.script,
     status: episode.status,
+    voice: episode.voice ?? defaultVoice,
     audioUrl: episode.audioPath
-      ? `${env.BASE_URL}/episodes/${episode.id}/audio?userId=${encodeURIComponent(userId)}`
+      ? buildEpisodeAudioUrl(episode.id, userId, episode.updatedAt)
       : null,
     audioDurationSeconds: episode.audioDurationSeconds,
     createdAt: episode.createdAt,

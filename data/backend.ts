@@ -14,6 +14,7 @@ type EpisodeListItem = {
   id: string;
   subject: string;
   status: string;
+  voice?: string | null;
   createdAt: string;
   sourceMessageId: string | null;
 };
@@ -24,6 +25,7 @@ type EpisodeDetail = {
   summary: string | null;
   script: string | null;
   status: string;
+  voice?: string | null;
   audioUrl: string | null;
   audioDurationSeconds: number | null;
   createdAt: string;
@@ -126,11 +128,13 @@ export async function getEpisode(episodeId: string): Promise<EpisodeDetail> {
   return (await response.json()) as EpisodeDetail;
 }
 
-export async function generateDailyEpisode(): Promise<EpisodeDetail | null> {
+export async function generateDailyEpisode(voice?: string): Promise<EpisodeDetail | null> {
   await requireUserId();
+  const body = voice ? JSON.stringify({ voice }) : undefined;
   const response = await fetch(`${API_BASE_URL}/episodes/daily`, {
     method: 'POST',
     headers: await buildHeaders(true),
+    body,
   });
   if (response.status === 204) {
     return null;

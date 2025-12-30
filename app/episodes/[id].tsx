@@ -36,6 +36,17 @@ const palette = {
 };
 
 const brandName = 'Paperboy';
+const voiceLabelByValue: Record<string, string> = {
+  alloy: 'Alloy',
+  nova: 'Nova',
+  echo: 'Echo',
+  fable: 'Fable',
+  onyx: 'Onyx',
+  shimmer: 'Shimmer',
+  ash: 'Ash',
+  sage: 'Sage',
+  coral: 'Coral',
+};
 
 export default function EpisodeDetailScreen() {
   const router = useRouter();
@@ -50,6 +61,7 @@ export default function EpisodeDetailScreen() {
     summary: string | null;
     script: string | null;
     status: string;
+    voice?: string | null;
     audioUrl: string | null;
     audioDurationSeconds: number | null;
     createdAt: string;
@@ -90,6 +102,8 @@ export default function EpisodeDetailScreen() {
     };
     void loadEpisode();
   }, [id]);
+
+  const voiceLabel = voiceLabelByValue[episode?.voice ?? ''] ?? 'Alloy';
 
   const handlePlaybackStatus = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) {
@@ -479,7 +493,7 @@ export default function EpisodeDetailScreen() {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBlock}>
-              <Text style={styles.statValue}>Warm</Text>
+              <Text style={styles.statValue}>{voiceLabel}</Text>
               <Text style={styles.statLabel}>VOICE</Text>
             </View>
           </View>
