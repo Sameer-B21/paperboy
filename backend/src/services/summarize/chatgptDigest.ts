@@ -124,7 +124,7 @@ export async function buildDailyDigestScript(payload: {
   const input = combined
   // truncateInput(combined, 12000);
   // console.log(`Input length to OpenAI: ${input.length} characters`);
-  console.log(combined);
+  // console.log(combined);
 
   // Call OpenAI Chat Completion API
   const response = await fetch("https://api.openai.com/v1/chat/completions", {

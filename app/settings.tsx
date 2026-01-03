@@ -22,7 +22,19 @@ import {
   syncGmail,
   updateNewsletterSelection,
 } from '@/data/backend';
-import { getTtsVoice, getUserEmail, getUserId, setTtsVoice, setUserEmail, setUserId } from '@/data/session';
+import {
+  clearOnboardingStep,
+  clearPodcastDurationMinutes,
+  clearTtsVoice,
+  clearUserEmail,
+  clearUserId,
+  getTtsVoice,
+  getUserEmail,
+  getUserId,
+  setTtsVoice,
+  setUserEmail,
+  setUserId,
+} from '@/data/session';
 import { useRequireUser } from '@/hooks/use-require-user';
 
 const palette = {
@@ -207,6 +219,16 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleLogoutPress = async () => {
+    setStatusMessage(null);
+    await clearUserId();
+    await clearUserEmail();
+    await clearTtsVoice();
+    await clearOnboardingStep();
+    await clearPodcastDurationMinutes();
+    router.replace('/onboarding/connect');
+  };
+
   const handleSyncPress = async () => {
     setIsSyncing(true);
     setIsLoading(true);
@@ -342,7 +364,9 @@ export default function SettingsScreen() {
                   onPress={handleSyncPress}
                   disabled={isSyncing}
                 >
-                  <Text style={styles.ghostButtonText}>{isSyncing ? 'Syncing...' : 'Sync now'}</Text>
+                  <Text style={styles.ghostButtonText}>
+                    {isSyncing ? 'Syncing...' : 'Sync now'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -549,6 +573,17 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
+
+        {isConnected ? (
+          <TouchableOpacity
+            style={styles.logoutButton}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            onPress={handleLogoutPress}
+          >
+            <Text style={styles.logoutButtonText}>Log out</Text>
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -1024,6 +1059,22 @@ const styles = StyleSheet.create({
     color: palette.secondaryText,
     fontSize: 13,
     fontFamily: Fonts.sans,
+  },
+  logoutButton: {
+    marginTop: 20,
+    marginBottom: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0B6A4',
+    backgroundColor: '#F5E7E0',
+    alignItems: 'center',
+  },
+  logoutButtonText: {
+    color: '#B4544A',
+    fontSize: 14,
+    fontFamily: Fonts.sans,
+    fontWeight: '600',
   },
   loadingOverlay: {
     position: 'absolute',
