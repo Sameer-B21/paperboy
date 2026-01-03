@@ -22,6 +22,7 @@ import {
   stopPreviewSound,
 } from '@/data/audioPlayer';
 import { getEpisode } from '@/data/backend';
+import { useRequireUser } from '@/hooks/use-require-user';
 
 const palette = {
   background: '#F6F1E9',
@@ -54,6 +55,7 @@ export default function EpisodeDetailScreen() {
   const navigation = useNavigation();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const insets = useSafeAreaInsets();
+  const { hasUser } = useRequireUser();
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [episode, setEpisode] = useState<{
@@ -79,6 +81,9 @@ export default function EpisodeDetailScreen() {
   const replayGuardRef = useRef(false);
 
   useEffect(() => {
+    if (!hasUser) {
+      return;
+    }
     if (!id) {
       return;
     }

@@ -25,6 +25,7 @@ import {
 } from '@/data/audioPlayer';
 import { generateDailyEpisode, getLatestDailyEpisode } from '@/data/backend';
 import { getTtsVoice } from '@/data/session';
+import { useRequireUser } from '@/hooks/use-require-user';
 
 const palette = {
   background: '#F6F1E9',
@@ -55,6 +56,7 @@ const voiceLabelByValue: Record<string, string> = {
 export default function TodayScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { hasUser } = useRequireUser();
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackStatus, setPlaybackStatus] = useState<
@@ -262,13 +264,16 @@ export default function TodayScreen() {
   const shouldForceGenerate = params.generate === '1' || params.generate === 'true';
 
   useEffect(() => {
+    if (!hasUser) {
+      return;
+    }
     if (shouldForceGenerate && !hasForcedGenerationRef.current) {
       hasForcedGenerationRef.current = true;
       void loadDailyEpisode(true);
       return;
     }
     void loadDailyEpisode(false);
-  }, [shouldForceGenerate]);
+  }, [shouldForceGenerate, hasUser]);
 
   const handlePlaybackStatus = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) {

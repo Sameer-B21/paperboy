@@ -31,6 +31,13 @@ type EpisodeDetail = {
   createdAt: string;
 };
 
+type UserProfile = {
+  id: string;
+  email: string;
+  name: string | null;
+  createdAt: string;
+};
+
 const buildHeaders = async (isJson = true): Promise<HeadersInit> => {
   const headers: Record<string, string> = {};
   if (isJson) {
@@ -62,6 +69,34 @@ export async function fetchAuthUrl(redirectUrl?: string): Promise<string> {
   }
   const payload = (await response.json()) as { url: string };
   return payload.url;
+}
+
+export async function createUser({
+  name,
+  email,
+}: {
+  name: string;
+  email: string;
+}): Promise<UserProfile> {
+  const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+    method: 'POST',
+    headers: await buildHeaders(true),
+    body: JSON.stringify({ name, email }),
+  });
+  if (!response.ok) {
+    let message = 'Unable to create account.';
+    try {
+      const payload = (await response.json()) as { error?: string };
+      if (payload?.error) {
+        message = payload.error;
+      }
+    } catch {
+      // Ignore JSON parse errors and use fallback message.
+    }
+    throw new Error(message);
+  }
+  const payload = (await response.json()) as { user: UserProfile };
+  return payload.user;
 }
 
 export async function syncGmail(): Promise<{ discovered: number }> {

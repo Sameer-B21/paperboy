@@ -3,9 +3,11 @@ import { google } from "googleapis";
 
 import { env } from "../config/env.js";
 import { gmailScopes, oauthClient } from "../config/googleOAuth.js";
-import { getOrCreateUserByEmail } from "../db/queries/users.sql.js";
+import { createUser, getOrCreateUserByEmail, getUserByEmail } from "../db/queries/users.sql.js";
 import { storeConnectionTokens } from "../services/security/tokenStore.js";
+import { AppError } from "../utils/errors.js";
 import { toIsoDate } from "../utils/time.js";
+import { requireString } from "../utils/validate.js";
 
 //Creates the Google consent screen URL for user to go to when connecting email
 function encodeRedirectState(redirect: string): string {
@@ -46,6 +48,19 @@ export async function getGoogleAuthUrl(req: Request, res: Response) {
   res.json({ url });
 }
 
+export async function signupWithEmail(req: Request, res: Response) {
+  const name = requireString(req.body?.name, "name");
+  const emailInput = requireString(req.body?.email, "email");
+  const email = emailInput.toLowerCase();
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(email)) {
+    throw new AppError("Enter a valid email address.");
+  }
+
+  const user = await getOrCreateUserByEmail(email, name);
+  res.json({ user });
+}
+
 //called by Google after the user approves access, Google redirects to GOOGLE_REDIRECT_URI, which points to this handler
 export async function handleGoogleCallback(req: Request, res: Response) {
   //ensures google code is present if not return error message
@@ -72,8 +87,10 @@ export async function handleGoogleCallback(req: Request, res: Response) {
     return;
   }
 
-  //create or get user by email in db
-  const user = await getOrCreateUserByEmail(email, profile.data.name ?? null);
+  //look up user by email in db to decide onboarding flow
+  const existingUser = await getUserByEmail(email);
+  const isNewUser = !existingUser;
+  const user = existingUser ?? (await createUser(email, profile.data.name ?? null));
 
   //store oauth token as connections
   await storeConnectionTokens({
@@ -92,6 +109,7 @@ export async function handleGoogleCallback(req: Request, res: Response) {
     redirectUrl.searchParams.set("userId", user.id);
     redirectUrl.searchParams.set("email", user.email);
     redirectUrl.searchParams.set("connected", "1");
+    redirectUrl.searchParams.set("isNew", isNewUser ? "1" : "0");
     res.redirect(redirectUrl.toString());
     return;
   }
@@ -102,6 +120,7 @@ export async function handleGoogleCallback(req: Request, res: Response) {
     redirectUrl.searchParams.set("userId", user.id);
     redirectUrl.searchParams.set("email", user.email);
     redirectUrl.searchParams.set("connected", "1");
+    redirectUrl.searchParams.set("isNew", isNewUser ? "1" : "0");
     res.redirect(redirectUrl.toString());
     return;
   }
@@ -109,6 +128,7 @@ export async function handleGoogleCallback(req: Request, res: Response) {
   res.json({
     userId: user.id,
     email: user.email,
+    isNew: isNewUser,
     redirect: `${env.BASE_URL}/settings`,
   });
 }

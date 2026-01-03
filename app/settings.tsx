@@ -23,6 +23,7 @@ import {
   updateNewsletterSelection,
 } from '@/data/backend';
 import { getTtsVoice, getUserEmail, getUserId, setTtsVoice, setUserEmail, setUserId } from '@/data/session';
+import { useRequireUser } from '@/hooks/use-require-user';
 
 const palette = {
   background: '#F6F1E9',
@@ -63,6 +64,7 @@ export default function SettingsScreen() {
   const { userId, email, connected } = params;
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  useRequireUser({ allowUserId: userId });
   const [isConnected, setIsConnected] = useState(false);
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);

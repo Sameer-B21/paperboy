@@ -6,6 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Fonts } from '@/constants/theme';
 import { listEpisodes } from '@/data/backend';
+import { useRequireUser } from '@/hooks/use-require-user';
 
 const palette = {
   background: '#F6F1E9',
@@ -22,6 +23,7 @@ const palette = {
 export default function ArchiveScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { hasUser } = useRequireUser();
   const [episodes, setEpisodes] = useState<
     Array<{
       id: string;
@@ -66,8 +68,11 @@ export default function ArchiveScreen() {
   };
 
   useEffect(() => {
+    if (!hasUser) {
+      return;
+    }
     void loadEpisodes();
-  }, []);
+  }, [hasUser]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
