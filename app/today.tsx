@@ -78,6 +78,7 @@ export default function TodayScreen() {
   const hasFinishedRef = useRef(false);
   const replayGuardRef = useRef(false);
   const hasForcedGenerationRef = useRef(false);
+  const playInFlightRef = useRef(false);
 
 
   const isBusy = playbackStatus === 'ingesting' || playbackStatus === 'generating' || playbackStatus === 'polling';
@@ -125,22 +126,24 @@ export default function TodayScreen() {
   }, [isInitialLoading, isBusy, loadingMessage, loadingEllipsis]);
 
   const handlePlayPress = async () => {
-    if (isBusy) {
+    if (isBusy || playInFlightRef.current) {
       return;
     }
+    playInFlightRef.current = true;
     setPlaybackError(null);
 
-    if (!audioUrl) {
-      setPlaybackError('Audio not ready yet.');
-      return;
-    }
-
     try {
+      if (!audioUrl) {
+        setPlaybackError('Audio not ready yet.');
+        return;
+      }
       await stopPreviewSound();
       const sound = await ensureSharedSound(audioUrl);
       const status = await sound.getStatusAsync();
 
       if (!status.isLoaded) {
+        await sound.playAsync();
+        setIsPlaying(true);
         return;
       }
       if (status.isPlaying) {
@@ -170,6 +173,8 @@ export default function TodayScreen() {
       setIsPlaying(true);
     } catch (error) {
       setPlaybackError(error instanceof Error ? error.message : 'Unable to play audio.');
+    } finally {
+      playInFlightRef.current = false;
     }
   };
 
@@ -500,9 +505,9 @@ export default function TodayScreen() {
               )}
             </View>
             <Text style={styles.badgeTitle}>{statusHeadline}</Text>
-            <Text style={[styles.badgeSubtitle, errorMessage ? styles.errorText : null]}>
+            {/* <Text style={[styles.badgeSubtitle, errorMessage ? styles.errorText : null]}>
               {loadingStatusText ?? statusText}
-            </Text>
+            </Text> */}
         </View>
 
         {hasAudio ? (

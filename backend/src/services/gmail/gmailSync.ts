@@ -5,6 +5,8 @@ import { createGmailClient } from "./gmailClient.js";
 import { isNewsletterEmail } from "./gmailFilters.js";
 import { parseMessage } from "./gmailParser.js";
 
+const MAX_NEWSLETTERS_PER_USER = 10;
+
 // Parse the sender's name and email from the From header
 function parseSender(fromHeader: string): { name: string; email: string } {
   const match = fromHeader.match(/^(.*)<([^>]+)>$/);
@@ -44,6 +46,10 @@ export async function discoverNewslettersForUser(userId: string): Promise<number
 
   //load existing newsletters
   const existingNewsletters = await listNewsletters(userId);
+  const remainingSlots = Math.max(0, MAX_NEWSLETTERS_PER_USER - existingNewsletters.length);
+  if (remainingSlots === 0) {
+    return 0;
+  }
   const newsletterIndex = new Map(
     existingNewsletters.map((newsletter) => [newsletter.sender.toLowerCase(), newsletter])
   );
@@ -70,6 +76,9 @@ export async function discoverNewslettersForUser(userId: string): Promise<number
     const sender = parseSender(parsed.from);
     const existingNewsletter = newsletterIndex.get(sender.email.toLowerCase());
     if (!existingNewsletter) {
+      if (discoveredCount >= remainingSlots) {
+        break;
+      }
       const newsletter = await upsertNewsletter({
         userId,
         name: sender.name || sender.email,

@@ -15,6 +15,8 @@ let statusHandler: ((status: AVPlaybackStatus) => void) | null = null;
 let lastSavedAt = 0;
 let lastSavedPosition = 0;
 let previewSound: Audio.Sound | null = null;
+let sharedLoadPromise: Promise<Audio.Sound> | null = null;
+let loadingUrl: string | null = null;
 
 type StoredPlayback = {
   positionMillis: number;
@@ -76,21 +78,33 @@ export async function ensureSharedSound(uri: string): Promise<Audio.Sound> {
   if (sharedSound && currentUrl === uri) {
     return sharedSound;
   }
+  if (sharedLoadPromise && loadingUrl === uri) {
+    return sharedLoadPromise;
+  }
   if (sharedSound) {
     await sharedSound.unloadAsync();
   }
-  const { sound } = await Audio.Sound.createAsync(
-    { uri },
-    { shouldPlay: false },
-    handleStatusUpdate,
-    true
-  );
-  sound.setOnPlaybackStatusUpdate(handleStatusUpdate);
-  sharedSound = sound;
-  currentUrl = uri;
-  lastSavedAt = 0;
-  lastSavedPosition = 0;
-  return sound;
+  loadingUrl = uri;
+  sharedLoadPromise = (async () => {
+    const { sound } = await Audio.Sound.createAsync(
+      { uri },
+      { shouldPlay: false },
+      handleStatusUpdate,
+      false
+    );
+    sound.setOnPlaybackStatusUpdate(handleStatusUpdate);
+    sharedSound = sound;
+    currentUrl = uri;
+    lastSavedAt = 0;
+    lastSavedPosition = 0;
+    return sound;
+  })();
+  try {
+    return await sharedLoadPromise;
+  } finally {
+    sharedLoadPromise = null;
+    loadingUrl = null;
+  }
 }
 
 export async function stopSharedSound(): Promise<void> {

@@ -37,6 +37,8 @@ const palette = {
   glow: '#F0E7DA',
 };
 
+const MAX_NEWSLETTERS_PER_USER = 10;
+
 type Newsletter = {
   id: string;
   name: string;
@@ -164,6 +166,10 @@ export default function SettingsScreen() {
     }
     const current = newsletters.find((item) => item.id === id);
     if (!current) {
+      return;
+    }
+    if (!current.selected && selectedCount >= MAX_NEWSLETTERS_PER_USER) {
+      setStatusMessage(`You can only select up to ${MAX_NEWSLETTERS_PER_USER} newsletters.`);
       return;
     }
     const nextSelected = !current.selected;
@@ -389,7 +395,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>Select newsletters</Text>
           <View style={styles.sectionActions}>
             <View style={styles.metaPill}>
-              <Text style={styles.metaText}>{selectedCount} selected</Text>
+              <Text style={styles.metaText}>{selectedCount}/{MAX_NEWSLETTERS_PER_USER} selected</Text>
             </View>
             <TouchableOpacity
               style={styles.toggleButton}
@@ -861,6 +867,12 @@ const styles = StyleSheet.create({
     color: palette.primaryText,
     fontSize: 18,
     fontFamily: Fonts.serif,
+  },
+  limitText: {
+    color: palette.secondaryText,
+    fontSize: 12,
+    fontFamily: Fonts.sans,
+    marginBottom: 12,
   },
   metaPill: {
     backgroundColor: palette.surface,
