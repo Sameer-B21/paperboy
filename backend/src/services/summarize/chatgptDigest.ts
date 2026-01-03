@@ -46,6 +46,33 @@ function truncateInput(text: string, maxChars: number): string {
   return `${text.slice(0, maxChars)}\n\n[Truncated for length]`;
 }
 
+function cleanNewsletterText(text: string): string {
+  const dropLinePatterns = [
+    /^\s*(unsubscribe|manage preferences|update your preferences)\b/i,
+    /^\s*(view (?:this email|in browser)|view in browser)\b/i,
+    /^\s*(privacy policy|terms of service)\b/i,
+    /^\s*(forward to a friend|share|tweet|follow us)\b/i,
+    /^\s*copyright\b/i,
+  ];
+
+  const cleaned = text
+    .replace(/\r\n/g, "\n")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1")
+    .replace(/\bhttps?:\/\/\S+/gi, "")
+    .replace(/\bwww\.\S+/gi, "")
+    .replace(/\b[\w.+-]+@[\w-]+\.[\w.-]+\b/g, "");
+
+  return cleaned
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .filter((line) => !dropLinePatterns.some((pattern) => pattern.test(line)))
+    .join("\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 // Extract JSON object with "summary" and "script" from content string.
 function extractJson(content: string): { summary: string; script: string } | null {
   try {
@@ -87,12 +114,17 @@ export async function buildDailyDigestScript(payload: {
 
   // Combine all newsletter items into a single input string.
   const combined = payload.items
-    .map((item, index) => `Newsletter ${index + 1}: ${item.subject}\n${item.body}`)
+    .map((item, index) => {
+      const cleanedBody = cleanNewsletterText(item.body);
+      return `Newsletter ${index + 1}: ${item.subject}\n${cleanedBody}`;
+    })
     .join("\n\n");
 
   //truncate message
-  const input = truncateInput(combined, 12000);
+  const input = combined
+  // truncateInput(combined, 12000);
   // console.log(`Input length to OpenAI: ${input.length} characters`);
+  console.log(combined);
 
   // Call OpenAI Chat Completion API
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
