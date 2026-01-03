@@ -18,7 +18,6 @@ import { Fonts } from '@/constants/theme';
 import { playPreview, stopPreviewSound } from '@/data/audioPlayer';
 import {
   fetchAuthUrl,
-  generateDailyEpisode,
   listNewsletters,
   syncGmail,
   updateNewsletterSelection,
@@ -216,18 +215,11 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleGenerateEpisode = async () => {
+  const handleGenerateEpisode = () => {
     setIsGenerating(true);
     setStatusMessage(null);
-    try {
-      await generateDailyEpisode(ttsVoice);
-      setStatusMessage('Daily brief queued. Check Today in a moment.');
-      router.push('/today');
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : 'Unable to generate daily brief.');
-    } finally {
-      setIsGenerating(false);
-    }
+    router.push({ pathname: '/today', params: { generate: '1' } });
+    setIsGenerating(false);
   };
 
   const playVoicePreview = async (voice: string) => {

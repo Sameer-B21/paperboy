@@ -58,9 +58,6 @@ export async function runDailyDigestForUser(
         endOfDay.toISOString()
       );
   if (episodes.length === 0) {
-    if (!options.force) {
-      return null;
-    }
     const digestEpisode =
       existing ??
       (await createEpisode({
@@ -115,9 +112,6 @@ export async function runDailyDigestForUser(
     .filter((item) => item.body.trim().length > 0);
 
   if (items.length === 0) {
-    if (!options.force) {
-      return null;
-    }
     const digestEpisode =
       existing ??
       (await createEpisode({

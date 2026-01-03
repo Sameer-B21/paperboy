@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { type AVPlaybackStatus } from 'expo-av';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -62,6 +62,7 @@ export default function TodayScreen() {
   >('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [episodeSummary, setEpisodeSummary] = useState<string | null>(null);
   const [podcastScript, setPodcastScript] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [episodeTitle, setEpisodeTitle] = useState<string>('Your Morning Brief');
@@ -72,12 +73,15 @@ export default function TodayScreen() {
   const [hasFinished, setHasFinished] = useState(false);
   const [isScriptVisible, setIsScriptVisible] = useState(false);
   const [episodeVoice, setEpisodeVoice] = useState<string>('alloy');
+  const [loadingEllipsis, setLoadingEllipsis] = useState<string>('');
   const seekInFlightRef = useRef(false);
   const hasFinishedRef = useRef(false);
   const replayGuardRef = useRef(false);
+  const hasForcedGenerationRef = useRef(false);
 
 
   const isBusy = playbackStatus === 'ingesting' || playbackStatus === 'generating' || playbackStatus === 'polling';
+  const isNavigationLocked = isBusy;
   const statusText = useMemo(() => {
     if (playbackError) {
       return playbackError;
@@ -98,6 +102,27 @@ export default function TodayScreen() {
         return "Your Paperboy hasn't arrived yet. Check back soon.";
     }
   }, [errorMessage, playbackError, playbackStatus]);
+
+  useEffect(() => {
+    const isLoading = isInitialLoading || playbackStatus === 'ingesting' || playbackStatus === 'generating' || playbackStatus === 'polling';
+    if (!isLoading) {
+      setLoadingEllipsis('');
+      return;
+    }
+    let step = 0;
+    const interval = setInterval(() => {
+      step = (step + 1) % 4;
+      setLoadingEllipsis('.'.repeat(step));
+    }, 450);
+    return () => clearInterval(interval);
+  }, [isInitialLoading, playbackStatus]);
+
+  const loadingStatusText = useMemo(() => {
+    if (isInitialLoading || isBusy) {
+      return `${loadingMessage.replace(/[.]+$/, '')}${loadingEllipsis}`;
+    }
+    return null;
+  }, [isInitialLoading, isBusy, loadingMessage, loadingEllipsis]);
 
   const handlePlayPress = async () => {
     if (isBusy) {
@@ -152,7 +177,7 @@ export default function TodayScreen() {
     return voiceLabelByValue[episodeVoice] ?? 'Alloy';
   }, [episodeVoice]);
 
-  const loadDailyEpisode = async (): Promise<string | null> => {
+  const loadDailyEpisode = async (forceGenerate = false): Promise<string | null> => {
     setErrorMessage(null);
     setPlaybackStatus('ingesting');
     setIsInitialLoading(true);
@@ -174,28 +199,30 @@ export default function TodayScreen() {
         ? new Date(digest.createdAt) >= dayStart
         : false;
 
-      if (digest && digest.audioUrl && isTodayBrief) {
+      if (digest && isTodayBrief && !forceGenerate) {
         const durationMillis = digest.audioDurationSeconds
           ? digest.audioDurationSeconds * 1000
           : 0;
-        setPodcastScript(digest.script);
-        setAudioUrl(digest.audioUrl);
+        setPodcastScript(digest.script ?? null);
+        setEpisodeSummary(digest.summary ?? null);
+        setAudioUrl(digest.audioUrl ?? null);
         setEpisodeTitle(digest.subject);
         setEpisodeVoice(digest.voice ?? resolvedVoice);
         setPlaybackPosition(0);
         setPlaybackDuration(durationMillis);
-        setIsDurationReady(durationMillis > 0);
+        setIsDurationReady(digest.audioUrl ? durationMillis > 0 : true);
         setHasFinished(false);
         setPlaybackStatus('ready');
         return digest.audioUrl;
       }
 
       setPlaybackStatus('generating');
-      setLoadingMessage('Creating your brief...');
+      setLoadingMessage("Generating today's brief");
       const generated = await generateDailyEpisode(resolvedVoice);
-      if (!generated || !generated.audioUrl) {
+      if (!generated) {
         setPlaybackStatus('idle');
         setPodcastScript(null);
+        setEpisodeSummary(null);
         setAudioUrl(null);
         setEpisodeTitle('Your Morning Brief');
         setErrorMessage('No daily brief yet. Check back after 7am.');
@@ -205,13 +232,14 @@ export default function TodayScreen() {
       const durationMillis = generated.audioDurationSeconds
         ? generated.audioDurationSeconds * 1000
         : 0;
-      setPodcastScript(generated.script);
-      setAudioUrl(generated.audioUrl);
+      setPodcastScript(generated.script ?? null);
+      setEpisodeSummary(generated.summary ?? null);
+      setAudioUrl(generated.audioUrl ?? null);
       setEpisodeTitle(generated.subject);
       setEpisodeVoice(generated.voice ?? resolvedVoice);
       setPlaybackPosition(0);
       setPlaybackDuration(durationMillis);
-      setIsDurationReady(durationMillis > 0);
+      setIsDurationReady(generated.audioUrl ? durationMillis > 0 : true);
       setHasFinished(false);
       setPlaybackStatus('ready');
       return generated.audioUrl;
@@ -225,9 +253,17 @@ export default function TodayScreen() {
     }
   };
 
+  const params = useLocalSearchParams<{ generate?: string }>();
+  const shouldForceGenerate = params.generate === '1' || params.generate === 'true';
+
   useEffect(() => {
-    void loadDailyEpisode();
-  }, []);
+    if (shouldForceGenerate && !hasForcedGenerationRef.current) {
+      hasForcedGenerationRef.current = true;
+      void loadDailyEpisode(true);
+      return;
+    }
+    void loadDailyEpisode(false);
+  }, [shouldForceGenerate]);
 
   const handlePlaybackStatus = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) {
@@ -379,26 +415,13 @@ export default function TodayScreen() {
     day: 'numeric',
   });
 
-  const hasEpisode = Boolean(audioUrl);
-  const showEmpty = !isInitialLoading && !hasEpisode;
-  const statusHeadline = hasEpisode ? 'Your paper is here!' : "Paperboy hasn't arrived yet";
-
-  const showLoadingScreen = isInitialLoading || (hasEpisode && !isDurationReady);
-
-  if (showLoadingScreen) {
-    return (
-      <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <View style={styles.backgroundGlow} />
-        <View style={styles.backgroundBloom} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={palette.icon} />
-          <Text style={styles.loadingText}>
-            {isInitialLoading ? loadingMessage : 'Loading your briefing duration...'}
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const hasAudio = Boolean(audioUrl);
+  const hasDigest = Boolean(audioUrl || podcastScript || episodeSummary);
+  const statusHeadline = hasDigest
+    ? hasAudio
+      ? 'Your paper is here!'
+      : 'Nothing in the inbox today'
+    : "Paperboy hasn't arrived yet";
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -413,11 +436,17 @@ export default function TodayScreen() {
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity
-              style={[styles.iconButton, isPlaying && styles.iconButtonDisabled]}
+              style={[
+                styles.iconButton,
+                (isPlaying || isNavigationLocked) && styles.iconButtonDisabled,
+              ]}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Past newsletters"
               onPress={async () => {
+                if (isNavigationLocked) {
+                  return;
+                }
                 const status = await getSharedStatus();
                 if (status?.isLoaded && status.isPlaying) {
                   Alert.alert('Playback in progress', 'Pause the brief before opening the archive.');
@@ -425,15 +454,22 @@ export default function TodayScreen() {
                 }
                 router.push('/archive');
               }}
+              disabled={isNavigationLocked}
             >
               <Ionicons name="file-tray-outline" size={25} color={palette.icon} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.iconButton}
+              style={[styles.iconButton, isNavigationLocked && styles.iconButtonDisabled]}
               activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Settings"
-              onPress={() => router.push('/settings')}
+              onPress={() => {
+                if (isNavigationLocked) {
+                  return;
+                }
+                router.push('/settings');
+              }}
+              disabled={isNavigationLocked}
             >
               <Ionicons name="options-outline" size={25} color={palette.icon} />
             </TouchableOpacity>
@@ -447,7 +483,7 @@ export default function TodayScreen() {
         
 
         <View style={styles.deliveryCard}>
-          {hasEpisode ? (
+          {hasDigest ? (
             <Text style={styles.deliveryEyebrow}>DELIVERED THIS MORNING</Text>
           ) : (
             <Text style={styles.deliveryEyebrow}>NO DELIVERY YET</Text>
@@ -460,21 +496,16 @@ export default function TodayScreen() {
               {isInitialLoading ? (
                 <ActivityIndicator size="small" color={palette.icon} />
               ) : (
-                <Ionicons name={hasEpisode ? 'newspaper-outline' : 'bicycle-outline'} size={26} color={palette.icon} />
+                <Ionicons name={hasDigest ? 'newspaper-outline' : 'bicycle-outline'} size={26} color={palette.icon} />
               )}
             </View>
             <Text style={styles.badgeTitle}>{statusHeadline}</Text>
-            {/*<Text style={[styles.badgeSubtitle, errorMessage ? styles.errorText : null]}>
-              {hasEpisode
-                ? statusText
-                : isInitialLoading
-                  && 'Checking for your brief...'
-                  // : "Paperboy hasn't arrived yet.\nCheck back soon."
-                  }
-            </Text>*/}
+            <Text style={[styles.badgeSubtitle, errorMessage ? styles.errorText : null]}>
+              {loadingStatusText ?? statusText}
+            </Text>
         </View>
 
-        {hasEpisode ? (
+        {hasAudio ? (
           <View style={styles.playRow}>
             <View style={styles.seekRow}>
               <TouchableOpacity
@@ -529,7 +560,7 @@ export default function TodayScreen() {
           </View>
         ) : null}
 
-        {hasEpisode ? (
+        {hasAudio ? (
           <View style={styles.progressSection}>
             <View style={styles.progressTrack}>
               <View
@@ -555,7 +586,7 @@ export default function TodayScreen() {
           </View>
         ) : null}
         </View>
-        {hasEpisode &&
+        {hasAudio &&
         <View style={styles.statsRow}>
           <View style={styles.statBlock}>
             <Text style={styles.statValue}>
@@ -569,6 +600,13 @@ export default function TodayScreen() {
             <Text style={styles.statLabel}>VOICE</Text>
           </View>
         </View>}
+
+        {!hasAudio && hasDigest && episodeSummary ? (
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Today's brief</Text>
+            <Text style={styles.summaryText}>{episodeSummary}</Text>
+          </View>
+        ) : null}
 
         {podcastScript ? (
           <View style={styles.summaryCard} accessibilityRole="summary">
