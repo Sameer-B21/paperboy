@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
+import { API_BASE_URL } from '@/constants/api';
 import { Fonts } from '@/constants/theme';
+import { playPreview, stopPreviewSound } from '@/data/audioPlayer';
 import { setOnboardingStep, setTtsVoice } from '@/data/session';
 
 const palette = {
@@ -35,6 +37,34 @@ export default function VoiceSelectScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [voice, setVoice] = useState('alloy');
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewVoice, setPreviewVoice] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      void stopPreviewSound();
+    };
+  }, []);
+
+  const playVoicePreview = async (nextVoice: string) => {
+    setPreviewError(null);
+    setIsPreviewLoading(true);
+    setPreviewVoice(nextVoice);
+    try {
+      const uri = `${API_BASE_URL}/tts/preview?voice=${encodeURIComponent(nextVoice)}`;
+      await playPreview(uri);
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : 'Unable to play voice preview.');
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+
+  const handleVoiceSelect = (nextVoice: string) => {
+    setVoice(nextVoice);
+    void playVoicePreview(nextVoice);
+  };
 
   const handleContinue = async () => {
     await setTtsVoice(voice);
@@ -63,7 +93,7 @@ export default function VoiceSelectScreen() {
               <TouchableOpacity
                 key={option.value}
                 style={[styles.voiceCard, isSelected ? styles.voiceCardSelected : null]}
-                onPress={() => setVoice(option.value)}
+                onPress={() => handleVoiceSelect(option.value)}
                 activeOpacity={0.8}
                 accessibilityRole="button"
               >
@@ -73,6 +103,13 @@ export default function VoiceSelectScreen() {
             );
           })}
         </View>
+
+        {isPreviewLoading ? (
+          <Text style={styles.previewText}>
+            Playing {voiceOptions.find((option) => option.value === previewVoice)?.label ?? 'voice'} preview...
+          </Text>
+        ) : null}
+        {previewError ? <Text style={styles.previewError}>{previewError}</Text> : null}
 
         <TouchableOpacity style={styles.primaryButton} onPress={handleContinue}>
           <Text style={styles.primaryButtonText}>Continue</Text>
@@ -117,6 +154,18 @@ const styles = StyleSheet.create({
   voiceGrid: {
     gap: 12,
     marginBottom: 20,
+  },
+  previewText: {
+    fontSize: 12,
+    color: palette.secondaryText,
+    fontFamily: Fonts.sans,
+    marginBottom: 8,
+  },
+  previewError: {
+    fontSize: 12,
+    color: '#A34B3F',
+    fontFamily: Fonts.sans,
+    marginBottom: 8,
   },
   voiceCard: {
     backgroundColor: palette.surface,
