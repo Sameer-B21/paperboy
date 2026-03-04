@@ -17,8 +17,16 @@ function readUserId(req: Request): string {
 //initiates Gmail synchronization for the authenticated user
 export async function syncGmail(req: Request, res: Response) {
   const userId = readUserId(req);
-  const result = await enqueueGmailDiscovery(userId);
-  res.json(result);
+  try {
+    const result = await enqueueGmailDiscovery(userId);
+    res.json(result);
+  } catch (error: any) {
+    if (error?.response?.data?.error === "invalid_grant") {
+      res.status(401).json({ error: "Google access has expired. Please sign in again." });
+      return;
+    }
+    throw error;
+  }
 }
 
 //lists newsletters for the authenticated user

@@ -98,7 +98,7 @@ export default function EpisodeDetailScreen() {
         setEpisode(detail);
         setPlaybackPosition(0);
         setPlaybackDuration(durationMillis);
-        setIsDurationReady(durationMillis > 0);
+        setIsDurationReady(detail.audioUrl ? durationMillis > 0 : true);
         setHasFinished(false);
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : 'Unable to load brief.');
@@ -124,6 +124,10 @@ export default function EpisodeDetailScreen() {
       } else if (status.positionMillis >= nextDuration - 250) {
         return;
       }
+    }
+    if (status.isLoaded && status.durationMillis && playbackDuration <= 0) {
+      setPlaybackDuration(status.durationMillis);
+      setIsDurationReady(true);
     }
     setIsPlaying(status.isPlaying);
     setPlaybackPosition((previous) => {
@@ -331,7 +335,7 @@ export default function EpisodeDetailScreen() {
   }
 
   const hasEpisode = Boolean(episode?.audioUrl);
-  const showLoadingScreen = isInitialLoading || (hasEpisode && !isDurationReady);
+  const showLoadingScreen = isInitialLoading;
   const dateLabel = episode?.createdAt
     ? new Date(episode.createdAt).toLocaleDateString(undefined, {
         weekday: 'long',

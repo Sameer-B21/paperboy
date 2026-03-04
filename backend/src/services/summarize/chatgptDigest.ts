@@ -147,9 +147,22 @@ export async function buildDailyDigestScript(payload: {
           role: "user",
           content:
             `Create a daily podcast script for ${payload.dateLabel}. ` +
-            "Each newsletter below is a single concatenated daily blurb. " +
+
+            `Turn the newsletters below into a smart, casual, Morning Brew–style audio briefing that replaces reading them.`+
+
+            `Requirements:
+            Cover all important content; ignore ads/promotions
+            If topics overlap, address once
+            Use a single-host, conversational voice, optimized for audio`+
+
+            `Structure:
+            1–2 sentence opening overview
+            Segments introduced with: \“Moving on to {Newsletter Name}…\”
+            End with “One Thing to Remember Today” and a short reflection`+
+
+            `Length: 7 minutes` +
             "Return JSON with keys \"summary\" (2-4 sentences) and \"script\" (4-6 minute read). " +
-            "Use an upbeat, informative tone. Avoid bullet points in the script.\n\n" +
+            `Newsletters:`, 
             input,
         },
       ],
