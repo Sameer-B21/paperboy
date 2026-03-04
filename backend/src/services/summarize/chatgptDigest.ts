@@ -160,7 +160,7 @@ export async function buildDailyDigestScript(payload: {
             Segments introduced with: \“Moving on to {Newsletter Name}…\”
             End with “One Thing to Remember Today” and a short reflection`+
 
-            `Length: 7 minutes` +
+            `Length: ${PODCAST_LENGTH} minutes` +
             "Return JSON with keys \"summary\" (2-4 sentences) and \"script\" (4-6 minute read). " +
             `Newsletters:`, 
             input,

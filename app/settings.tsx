@@ -1,37 +1,27 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as ExpoLinking from 'expo-linking';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { API_BASE_URL } from '@/constants/api';
 import { Fonts } from '@/constants/theme';
-import { playPreview, stopPreviewSound } from '@/data/audioPlayer';
-import {
-  fetchAuthUrl,
-  listNewsletters,
-  syncGmail,
-  updateNewsletterSelection,
-} from '@/data/backend';
+import { listNewsletters } from '@/data/backend';
 import {
   clearOnboardingStep,
   clearPodcastDurationMinutes,
   clearTtsVoice,
   clearUserEmail,
   clearUserId,
+  getPodcastDurationMinutes,
   getTtsVoice,
   getUserEmail,
   getUserId,
-  setTtsVoice,
   setUserEmail,
   setUserId,
 } from '@/data/session';
@@ -50,177 +40,57 @@ const palette = {
   glow: '#F0E7DA',
 };
 
-const MAX_NEWSLETTERS_PER_USER = 10;
-
-type Newsletter = {
-  id: string;
-  name: string;
-  sender: string;
-  selected: boolean;
-};
-
-const ttsVoiceOptions = [
-  { value: 'alloy', label: 'Alloy', description: 'Balanced and clear.' },
-  { value: 'nova', label: 'Nova', description: 'Bright and lively.' },
-  { value: 'echo', label: 'Echo', description: 'Smooth and steady.' },
-  { value: 'fable', label: 'Fable', description: 'Warm and story-like.' },
-  { value: 'onyx', label: 'Onyx', description: 'Deep and grounded.' },
-  { value: 'shimmer', label: 'Shimmer', description: 'Soft and airy.' },
-  { value: 'ash', label: 'Ash', description: 'Crisp and neutral.' },
-  { value: 'sage', label: 'Sage', description: 'Calm and measured.' },
-  { value: 'coral', label: 'Coral', description: 'Friendly and upbeat.' },
-];
-
 export default function SettingsScreen() {
   const params = useLocalSearchParams<{ userId?: string; email?: string; connected?: string }>();
   const { userId, email, connected } = params;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   useRequireUser({ allowUserId: userId });
+
+  const [userEmail, setUserEmailState] = useState('');
+  const [ttsVoice, setTtsVoiceState] = useState('alloy');
+  const [durationMinutes, setDurationMinutes] = useState('8');
+  const [activeNewsletterCount, setActiveNewsletterCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
-  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [userEmail, setUserEmailState] = useState<string>('');
-  const [hasDiscovered, setHasDiscovered] = useState(false);
-  const [updatingIds, setUpdatingIds] = useState<string[]>([]);
-  const [hasAppliedParams, setHasAppliedParams] = useState(false);
-  const [ttsVoice, setTtsVoiceState] = useState<string>('alloy');
-  const [showNewsletters, setShowNewsletters] = useState(false);
-  const [showVoices, setShowVoices] = useState(true);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const [previewVoice, setPreviewVoice] = useState<string | null>(null);
-  const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const selectedCount = useMemo(
-    () => newsletters.filter((newsletter) => newsletter.selected).length,
-    [newsletters]
-  );
-
-  const loadNewsletters = async () => {
-    const storedUserId = await getUserId();
-    if (!storedUserId) {
-      return;
-    }
-    setIsLoading(true);
-    setStatusMessage(null);
-    try {
-      const data = await listNewsletters();
-      setNewsletters(data);
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : 'Unable to load newsletters.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    const boot = async () => {
-      setIsInitialLoading(true);
-      const storedUserId = await getUserId();
-      const storedEmail = await getUserEmail();
-      const storedVoice = await getTtsVoice();
-      if (storedUserId) {
-        setIsConnected(true);
-      }
-      if (storedEmail) {
-        setUserEmailState(storedEmail);
-      }
-      if (storedVoice) {
-        setTtsVoiceState(storedVoice);
-      }
-      await loadNewsletters();
-      setHasDiscovered(true);
-      setIsInitialLoading(false);
-    };
-    void boot();
+  const loadSession = useCallback(async () => {
+    const [storedEmail, storedVoice, storedDuration, storedUserId] = await Promise.all([
+      getUserEmail(),
+      getTtsVoice(),
+      getPodcastDurationMinutes(),
+      getUserId(),
+    ]);
+    if (storedEmail) setUserEmailState(storedEmail);
+    if (storedVoice) setTtsVoiceState(storedVoice);
+    if (storedDuration) setDurationMinutes(storedDuration);
+    if (storedUserId) setIsConnected(true);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      void stopPreviewSound();
-    };
+  const loadNewsletterCount = useCallback(async () => {
+    try {
+      const data = await listNewsletters();
+      setActiveNewsletterCount(data.filter((n) => n.selected).length);
+    } catch {
+      // ignore
+    }
   }, []);
 
   useEffect(() => {
     const applyParams = async () => {
-      setHasAppliedParams(false);
-      if (userId) {
-        await setUserId(userId);
-        setIsConnected(true);
-      }
-      if (email) {
-        await setUserEmail(email);
-        setUserEmailState(email);
-      }
-      if (userId || email || connected) {
-        setIsInitialLoading(true);
-        setHasDiscovered(false);
-        await loadNewsletters();
-        setIsInitialLoading(false);
-      }
-      setHasAppliedParams(true);
+      if (userId) await setUserId(userId);
+      if (email) await setUserEmail(email);
     };
-    void applyParams();
+    void applyParams().then(loadSession).then(loadNewsletterCount);
   }, [userId, email, connected]);
 
-  useEffect(() => {
-    if (!isConnected || hasDiscovered) {
-      return;
-    }
-    setHasDiscovered(true);
-  }, [isConnected, hasDiscovered]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadSession();
+      void loadNewsletterCount();
+    }, [loadSession, loadNewsletterCount])
+  );
 
-  const toggleNewsletter = async (id: string) => {
-    if (updatingIds.includes(id)) {
-      return;
-    }
-    const current = newsletters.find((item) => item.id === id);
-    if (!current) {
-      return;
-    }
-    if (!current.selected && selectedCount >= MAX_NEWSLETTERS_PER_USER) {
-      setStatusMessage(`You can only select up to ${MAX_NEWSLETTERS_PER_USER} newsletters.`);
-      return;
-    }
-    const nextSelected = !current.selected;
-    setUpdatingIds((prev) => [...prev, id]);
-    setNewsletters((prev) =>
-      prev.map((newsletter) =>
-        newsletter.id === id ? { ...newsletter, selected: nextSelected } : newsletter
-      )
-    );
-    try {
-      await updateNewsletterSelection(id, nextSelected);
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : 'Unable to update selection.');
-      setNewsletters((prev) =>
-        prev.map((newsletter) =>
-          newsletter.id === id ? { ...newsletter, selected: current.selected } : newsletter
-        )
-      );
-    } finally {
-      setUpdatingIds((prev) => prev.filter((entry) => entry !== id));
-    }
-  };
-
-  const handleConnectPress = async () => {
-    setStatusMessage(null);
-    try {
-      const redirectUrl = ExpoLinking.createURL('/settings');
-      const url = await fetchAuthUrl(redirectUrl);
-      await ExpoLinking.openURL(url);
-      setStatusMessage('Complete Gmail auth, then set EXPO_PUBLIC_USER_ID and refresh.');
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : 'Unable to start Gmail auth.');
-    }
-  };
-
-  const handleLogoutPress = async () => {
-    setStatusMessage(null);
+  const handleLogout = async () => {
     await clearUserId();
     await clearUserEmail();
     await clearTtsVoice();
@@ -229,359 +99,100 @@ export default function SettingsScreen() {
     router.replace('/onboarding/connect');
   };
 
-  const handleSyncPress = async () => {
-    setIsSyncing(true);
-    setIsLoading(true);
-    setStatusMessage(null);
-    try {
-      const result = await syncGmail();
-      setStatusMessage(`Discovered ${result.discovered} newsletters.`);
-      await loadNewsletters();
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : 'Unable to sync Gmail.');
-    } finally {
-      setIsSyncing(false);
-      setIsLoading(false);
-    }
-  };
-
-  const handleGenerateEpisode = () => {
-    setIsGenerating(true);
-    setStatusMessage(null);
-    router.push({ pathname: '/today', params: { generate: '1' } });
-    setIsGenerating(false);
-  };
-
-  const playVoicePreview = async (voice: string) => {
-    setPreviewError(null);
-    setIsPreviewLoading(true);
-    setPreviewVoice(voice);
-    try {
-      const uri = `${API_BASE_URL}/tts/preview?voice=${encodeURIComponent(voice)}`;
-      await playPreview(uri);
-    } catch (error) {
-      setPreviewError(error instanceof Error ? error.message : 'Unable to play voice preview.');
-    } finally {
-      setIsPreviewLoading(false);
-    }
-  };
-
-  const handleVoiceSelect = async (voice: string) => {
-    setTtsVoiceState(voice);
-    void playVoicePreview(voice);
-    try {
-      await setTtsVoice(voice);
-    } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : 'Unable to save voice preference.');
-    }
-  };
-
-  const shouldShowLoadingOverlay =
-    (isInitialLoading ||
-      (!!(params.userId || params.email || params.connected) && !hasAppliedParams)) &&
-    newsletters.length === 0;
+  const voiceLabel = ttsVoice.charAt(0).toUpperCase() + ttsVoice.slice(1);
+  const durationLabel = `${durationMinutes} min`;
+  const sourcesLabel =
+    activeNewsletterCount > 0
+      ? `${activeNewsletterCount} active newsletter${activeNewsletterCount === 1 ? '' : 's'}`
+      : 'No newsletters selected';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-      <View style={styles.backgroundOrbs} pointerEvents="none">
-        <View style={styles.orbLarge} />
-        <View style={styles.orbSmall} />
-        <View style={styles.orbHighlight} />
-      </View>
-      {shouldShowLoadingOverlay ? (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={palette.accent} />
-          <Text style={styles.loadingText}>Loading your newsletters…</Text>
-        </View>
-      ) : null}
-      <View style={[styles.headerRow, { paddingTop: insets.top + 16 }]}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Back to today"
-            onPress={() => router.push('/today')}
-          >
-            <Ionicons name="chevron-back" size={25} color={palette.icon} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Settings</Text>
-          <View style={styles.headerSpacer} />
-          {/* <TouchableOpacity
-            style={styles.iconButton}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Settings"
-            onPress={() => router.push('/settings')}
-          >
-            <Ionicons name="settings-outline" size={20} color={palette.icon} />
-          </TouchableOpacity> */}
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <TouchableOpacity
+          style={styles.backButton}
+          activeOpacity={0.7}
+          onPress={() => router.push('/today')}
+        >
+          <Ionicons name="chevron-back" size={25} color={palette.icon} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Settings</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        bounces={false}
       >
-        {/* <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.kicker}>Settings</Text>
-            <Text style={styles.title}>Newsletter connections</Text>
-          </View>
-        </View> */}
-
-        <View style={styles.connectionCard}>
-          <View style={styles.connectionHeader}>
-            <View style={styles.connectionHeaderTop}>
-              <Text style={styles.cardTitle}>Gmail inbox</Text>
-              <View style={styles.statusPill}>
-                <View style={[styles.statusDot, isConnected ? styles.statusDotOn : null]} />
-                <Text style={styles.statusLabel}>
-                  {isConnected ? 'Connected' : 'Not connected'}
-                </Text>
-              </View>
+        <Text style={styles.sectionLabel}>Account</Text>
+        <View style={styles.card}>
+          <View style={styles.row}>
+            <View style={styles.iconBubble}>
+              <Ionicons name="person-outline" size={18} color={palette.icon} />
             </View>
-            <Text style={styles.cardSubtitle}>
-              Sync newsletters, auto-tag episodes, and keep your sources tidy.
-            </Text>
-          </View>
-
-          <View style={styles.connectionBody}>
-            {isConnected ? (
-              <View style={styles.accountRow}>
-                {/* <View style={styles.accountAvatar}>
-                  <Text style={styles.accountInitials}>TL</Text>
-                </View> */}
-                <View style={styles.accountMeta}>
-                  <Text style={styles.accountName}>Gmail connected</Text>
-                  <Text style={styles.accountEmail}>
-                    {userEmail || 'Signed in'}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.ghostButton}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  onPress={handleSyncPress}
-                  disabled={isSyncing}
-                >
-                  <Text style={styles.ghostButtonText}>
-                    {isSyncing ? 'Syncing...' : 'Sync now'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View>
-                <TouchableOpacity
-                  style={styles.connectButton}
-                  activeOpacity={0.85}
-                  accessibilityRole="button"
-                  onPress={handleConnectPress}
-                >
-                  <Ionicons name="logo-google" size={18} color="#ffffff" />
-                  <Text style={styles.connectButtonText}>Connect Gmail</Text>
-                </TouchableOpacity>
-                <Text style={styles.helperText}>
-                  We only read newsletters and label them "Podcast Sources".
-                </Text>
-              </View>
-            )}
+            <View style={styles.rowContent}>
+              <Text style={styles.rowTitle}>Email</Text>
+              <Text style={styles.rowSubtitle} numberOfLines={1}>{userEmail || '—'}</Text>
+            </View>
           </View>
         </View>
 
-        {/* <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Step 2 · Discover newsletters</Text>
-          <View style={styles.metaPill}>
-            <Text style={styles.metaText}>{newsletters.length} found</Text>
-          </View>
-        </View>
-
-        <View style={styles.rulesCard}>
-          <View style={styles.ruleRow}>
-            <View>
-              <Text style={styles.ruleTitle}>Scan inbox</Text>
-              <Text style={styles.ruleSubtitle}>
-                We scan the last 30 days and list newsletter senders as inactive.
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.ghostButton}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              onPress={handleSyncPress}
-              disabled={isSyncing || !isConnected}
-            >
-              <Text style={styles.ghostButtonText}>
-                {isSyncing ? 'Scanning...' : 'Find newsletters'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View> */}
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Select newsletters</Text>
-          <View style={styles.sectionActions}>
-            <View style={styles.metaPill}>
-              <Text style={styles.metaText}>{selectedCount}/{MAX_NEWSLETTERS_PER_USER} selected</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.toggleButton}
-              activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel={showNewsletters ? 'Hide newsletters' : 'Show newsletters'}
-              onPress={() => setShowNewsletters((prev) => !prev)}
-            >
-              <Text style={styles.toggleButtonText}>{showNewsletters ? 'Hide' : 'Show'}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {showNewsletters ? (
-          <View style={styles.listCard}>
-            {isLoading && newsletters.length === 0 ? (
-              <Text style={styles.emptyText}>Loading newsletters…</Text>
-            ) : newsletters.length === 0 ? (
-              <Text style={styles.emptyText}>No newsletters yet. Run a sync to populate.</Text>
-            ) : (
-              newsletters.map((newsletter, index) => (
-                <View
-                  key={newsletter.id}
-                  style={[
-                    styles.listRow,
-                    index === newsletters.length - 1 ? styles.listRowLast : null,
-                  ]}
-                >
-                  <View style={styles.listInfo}>
-                    <Text style={styles.listTitle}>{newsletter.name}</Text>
-                    <Text style={styles.listDescription}>{newsletter.sender}</Text>
-                    <View style={styles.cadencePill}>
-                      <Text style={styles.cadenceText}>Auto-import enabled</Text>
-                    </View>
-                  </View>
-                  <Switch
-                    value={newsletter.selected}
-                    onValueChange={() => toggleNewsletter(newsletter.id)}
-                    trackColor={{ false: palette.border, true: palette.accent }}
-                    thumbColor={newsletter.selected ? '#ffffff' : '#ffffff'}
-                    ios_backgroundColor={palette.border}
-                    disabled={updatingIds.includes(newsletter.id) || !isConnected}
-                  />
-                </View>
-              ))
-            )}
-          </View>
-        ) : null}
-
-        {statusMessage ? <Text style={styles.statusMessage}>{statusMessage}</Text> : null}
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Narration voice</Text>
+        <Text style={styles.sectionLabel}>Sources</Text>
+        <View style={styles.card}>
           <TouchableOpacity
-            style={styles.toggleButton}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel={showVoices ? 'Hide voice options' : 'Show voice options'}
-            onPress={() => setShowVoices((prev) => !prev)}
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => router.push('/newsletters')}
           >
-            <Text style={styles.toggleButtonText}>{showVoices ? 'Hide' : 'Show'}</Text>
+            <View style={styles.iconBubble}>
+              <Ionicons name="mail-outline" size={18} color={palette.icon} />
+            </View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowTitle}>Manage Sources</Text>
+              <Text style={styles.rowSubtitle}>{sourcesLabel}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
           </TouchableOpacity>
         </View>
 
-        {showVoices ? (
-          <View style={styles.voiceCard}>
-            <Text style={styles.cardTitle}>Choose your ChatGPT voice</Text>
-            <Text style={styles.cardSubtitle}>
-              This voice is used for newly generated daily briefs.
-            </Text>
-            {isPreviewLoading ? (
-              <Text style={styles.previewText}>
-                Playing {ttsVoiceOptions.find((option) => option.value === previewVoice)?.label ?? 'voice'} preview...
-              </Text>
-            ) : null}
-            {previewError ? <Text style={styles.previewError}>{previewError}</Text> : null}
-            <View style={styles.voiceOptions}>
-              {ttsVoiceOptions.map((option) => {
-                const isSelected = ttsVoice === option.value;
-                return (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[styles.voiceOption, isSelected ? styles.voiceOptionSelected : null]}
-                    activeOpacity={0.85}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Select ${option.label} voice`}
-                    onPress={() => handleVoiceSelect(option.value)}
-                  >
-                    <View style={styles.voiceOptionText}>
-                      <Text style={styles.voiceOptionTitle}>{option.label}</Text>
-                      <Text style={styles.voiceOptionSubtitle}>{option.description}</Text>
-                    </View>
-                    {isSelected ? (
-                      <Ionicons name="checkmark-circle" size={20} color={palette.accent} />
-                    ) : (
-                      <Ionicons name="ellipse-outline" size={20} color={palette.border} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        ) : null}
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Generate new brief</Text>
-        </View>
-
-        <View style={styles.connectionCard}>
-          <Text style={styles.cardTitle}>One briefing, every day</Text>
-          <Text style={styles.cardSubtitle}>
-            Click generate to create a new daily digest episode for today from your selected newsletters.
-          </Text>
+        <Text style={styles.sectionLabel}>Delivery Preferences</Text>
+        <View style={styles.card}>
           <TouchableOpacity
-            style={styles.connectButton}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            onPress={handleGenerateEpisode}
-            disabled={isGenerating || selectedCount === 0}
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => router.push('/voice')}
           >
-            <Ionicons name="play-circle" size={18} color="#ffffff" />
-            <Text style={styles.connectButtonText}>
-              {isGenerating ? 'Generating...' : 'Generate new daily digest'}
-            </Text>
+            <View style={styles.iconBubble}>
+              <Ionicons name="mic-outline" size={18} color={palette.icon} />
+            </View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowTitle}>Voice Style</Text>
+              <Text style={styles.rowSubtitle}>{voiceLabel}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
           </TouchableOpacity>
-        </View>
 
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Import rules</Text>
-        </View>
+          <View style={styles.divider} />
 
-        <View style={styles.rulesCard}>
-          <View style={styles.ruleRow}>
-            <View>
-              <Text style={styles.ruleTitle}>Lookback window</Text>
-              <Text style={styles.ruleSubtitle}>Capture newsletters from the last 30 days.</Text>
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => router.push('/duration')}
+          >
+            <View style={styles.iconBubble}>
+              <Ionicons name="time-outline" size={18} color={palette.icon} />
             </View>
-            <View style={styles.rulePill}>
-              <Text style={styles.rulePillText}>30 days</Text>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowTitle}>Delivery Length</Text>
+              <Text style={styles.rowSubtitle}>{durationLabel}</Text>
             </View>
-          </View>
-          <View style={[styles.ruleRow, styles.ruleRowLast]}>
-            <View>
-              <Text style={styles.ruleTitle}>Auto-categorize</Text>
-              <Text style={styles.ruleSubtitle}>Tag each brief by topic once imported.</Text>
-            </View>
-            <View style={styles.rulePillMuted}>
-              <Text style={styles.rulePillTextMuted}>Enabled</Text>
-            </View>
-          </View>
+            <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
+          </TouchableOpacity>
         </View>
 
         {isConnected ? (
-          <TouchableOpacity
-            style={styles.logoutButton}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            onPress={handleLogoutPress}
-          >
-            <Text style={styles.logoutButtonText}>Log out</Text>
+          <TouchableOpacity style={styles.logoutButton} activeOpacity={0.85} onPress={handleLogout}>
+            <Text style={styles.logoutText}>Log out</Text>
           </TouchableOpacity>
         ) : null}
       </ScrollView>
@@ -594,503 +205,106 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: palette.background,
   },
-  backgroundOrbs: {
-    ...StyleSheet.absoluteFillObject,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 22,
+    paddingBottom: 16,
+    backgroundColor: palette.card,
+    marginBottom: 8,
   },
-  orbLarge: {
-    position: 'absolute',
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: palette.glow,
-    top: -60,
-    right: -90,
-    opacity: 0.7,
+  backButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
   },
-  orbSmall: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: '#EFE3D3',
-    top: 120,
-    left: -60,
-    opacity: 0.5,
+  headerTitle: {
+    flex: 1,
+    textAlign: 'center',
+    color: palette.primaryText,
+    fontSize: 20,
+    fontFamily: Fonts.serif,
+    letterSpacing: 0.4,
   },
-  orbHighlight: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: '#EADCCA',
-    bottom: -90,
-    right: -60,
-    opacity: 0.35,
+  headerSpacer: {
+    width: 36,
   },
   scrollContent: {
-    // paddingTop: -22,
     paddingHorizontal: 22,
-    paddingBottom: 90,
+    paddingBottom: 48,
+    paddingTop: 16,
   },
-  headerRow: {
-      // flexDirection: 'row',
-      // alignItems: 'center',
-      // justifyContent: 'space-between',
-      // marginBottom: 24,
-      paddingVertical: 16,
-      backgroundColor: palette.card,
-      paddingHorizontal: 22,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 24,
-      // shadowColor: '#000000',
-      // shadowOpacity: 0.06,
-      // shadowRadius: 18,
-      // shadowOffset: { width: 0, height: 12 },
-    },
-    headerTitle: {
-      color: palette.primaryText,
-      fontSize: 20,
-      fontFamily: Fonts.serif,
-      letterSpacing: 0.4,
-      textAlign: 'center',
-      flex: 1,
-    },
-    headerSpacer: {
-      width: 36,
-    },
-    iconButton: {
-      width: 36,
-      height: 36,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 12,
-      // backgroundColor: palette.surface,
-      // borderWidth: 1,
-      // borderColor: palette.border,
-    },
-  kicker: {
+  sectionLabel: {
     color: palette.secondaryText,
-    fontSize: 13,
+    fontSize: 11,
     fontFamily: Fonts.sans,
-    letterSpacing: 0.6,
+    fontWeight: '600',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
+    marginBottom: 8,
+    marginLeft: 4,
   },
-  title: {
-    color: palette.primaryText,
-    fontSize: 28,
-    fontFamily: Fonts.serif,
-    marginTop: 6,
-  },
-  iconBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: palette.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  connectionCard: {
+  card: {
     backgroundColor: palette.card,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: palette.border,
-    marginBottom: 20,
+    marginBottom: 28,
+    overflow: 'hidden',
   },
-  voiceCard: {
-    backgroundColor: palette.card,
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: palette.border,
-    marginBottom: 20,
-  },
-  voiceOptions: {
-    gap: 12,
-  },
-  previewText: {
-    color: palette.secondaryText,
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    marginBottom: 10,
-  },
-  previewError: {
-    color: '#A34B3F',
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    marginBottom: 10,
-  },
-  voiceOption: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 14,
   },
-  voiceOptionSelected: {
-    borderColor: palette.accent,
-    backgroundColor: '#F4E6D8',
-  },
-  voiceOptionText: {
-    flex: 1,
-  },
-  voiceOptionTitle: {
-    color: palette.primaryText,
-    fontSize: 15,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  voiceOptionSubtitle: {
-    color: palette.secondaryText,
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: Fonts.sans,
-    marginTop: 2,
-  },
-  connectionHeader: {
-    gap: 10,
-    marginBottom: 16,
-  },
-  connectionHeaderTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  cardTitle: {
-    color: palette.primaryText,
-    fontSize: 18,
-    fontFamily: Fonts.serif,
-    flex: 1,
-  },
-  cardSubtitle: {
-    color: palette.secondaryText,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: Fonts.sans,
-    marginTop: 6,
-    maxWidth: '100%',
-    marginBottom: 16,
-  },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#C9B9A6',
-  },
-  statusDotOn: {
-    backgroundColor: '#7BB28E',
-  },
-  statusLabel: {
-    color: palette.secondaryText,
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-  },
-  connectionBody: {
-    borderRadius: 14,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: 16,
-  },
-  connectButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: palette.accent,
-    paddingVertical: 12,
-    borderRadius: 12,
-    shadowColor: palette.accentDark,
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  connectButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  helperText: {
-    color: palette.secondaryText,
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: Fonts.sans,
-    marginTop: 10,
-  },
-  accountRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  accountAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  accountInitials: {
-    color: palette.primaryText,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  accountMeta: {
-    flex: 1,
-  },
-  accountName: {
-    color: palette.primaryText,
-    fontSize: 15,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  accountEmail: {
-    color: palette.secondaryText,
-    fontSize: 13,
-    fontFamily: Fonts.sans,
-    marginTop: 2,
-  },
-  ghostButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  iconBubble: {
+    width: 36,
+    height: 36,
     borderRadius: 10,
     backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.border,
-  },
-  ghostButtonText: {
-    color: palette.accentDark,
-    fontSize: 13,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    marginBottom: 12,
+    justifyContent: 'center',
   },
-  sectionActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  sectionTitle: {
-    color: palette.primaryText,
-    fontSize: 18,
-    fontFamily: Fonts.serif,
-  },
-  limitText: {
-    color: palette.secondaryText,
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    marginBottom: 12,
-  },
-  metaPill: {
-    backgroundColor: palette.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  metaText: {
-    color: palette.secondaryText,
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-  },
-  toggleButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.surface,
-  },
-  toggleButtonText: {
-    color: palette.accentDark,
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  listCard: {
-    backgroundColor: palette.surface,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: 16,
-    gap: 16,
-  },
-  emptyText: {
-    color: palette.secondaryText,
-    fontSize: 13,
-    fontFamily: Fonts.sans,
-  },
-  listRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 14,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.border,
-  },
-  listRowLast: {
-    borderBottomWidth: 0,
-  },
-  listInfo: {
+  rowContent: {
     flex: 1,
   },
-  listTitle: {
+  rowTitle: {
     color: palette.primaryText,
     fontSize: 15,
     fontFamily: Fonts.sans,
     fontWeight: '600',
   },
-  listDescription: {
-    color: palette.secondaryText,
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: Fonts.sans,
-    marginTop: 4,
-  },
-  cadencePill: {
-    alignSelf: 'flex-start',
-    marginTop: 8,
-    backgroundColor: palette.surface,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  cadenceText: {
-    color: palette.secondaryText,
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    letterSpacing: 0.2,
-  },
-  rulesCard: {
-    backgroundColor: palette.surface,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: 16,
-    gap: 14,
-  },
-  ruleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.border,
-    paddingBottom: 12,
-  },
-  ruleRowLast: {
-    borderBottomWidth: 0,
-    paddingBottom: 0,
-  },
-  ruleTitle: {
-    color: palette.primaryText,
-    fontSize: 15,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  ruleSubtitle: {
-    color: palette.secondaryText,
-    fontSize: 13,
-    lineHeight: 18,
-    fontFamily: Fonts.sans,
-    marginTop: 4,
-    maxWidth: 220,
-  },
-  rulePill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: palette.glow,
-  },
-  rulePillText: {
-    color: palette.primaryText,
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  rulePillMuted: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#E9DED1',
-  },
-  rulePillTextMuted: {
-    color: palette.icon,
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  statusMessage: {
-    marginTop: 12,
+  rowSubtitle: {
     color: palette.secondaryText,
     fontSize: 13,
     fontFamily: Fonts.sans,
+    marginTop: 2,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: palette.border,
+    marginLeft: 66,
   },
   logoutButton: {
-    marginTop: 20,
-    marginBottom: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
+    marginTop: 4,
+    paddingVertical: 14,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E0B6A4',
     backgroundColor: '#F5E7E0',
     alignItems: 'center',
   },
-  logoutButtonText: {
+  logoutText: {
     color: '#B4544A',
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: Fonts.sans,
     fontWeight: '600',
-  },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    backgroundColor: 'rgba(246, 241, 233, 0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    zIndex: 20,
-  },
-  loadingText: {
-    fontSize: 15,
-    color: palette.primaryText,
-    fontFamily: Fonts.sans,
   },
 });
