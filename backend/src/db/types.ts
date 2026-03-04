@@ -2,6 +2,7 @@ export type User = {
   id: string;
   email: string;
   name: string | null;
+  podcastDurationMinutes: number | null;
   createdAt: string;
 };
 

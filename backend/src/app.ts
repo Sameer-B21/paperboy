@@ -5,6 +5,7 @@ import { authRouter } from "./routes/auth.routes.js";
 import { episodesRouter } from "./routes/episodes.routes.js";
 import { gmailRouter } from "./routes/gmail.routes.js";
 import { ttsRouter } from "./routes/tts.routes.js";
+import { usersRouter } from "./routes/users.routes.js";
 import { webhooksRouter } from "./routes/webhooks.routes.js";
 import { AppError, toErrorMessage } from "./utils/errors.js";
 
@@ -27,6 +28,7 @@ export function createApp() {
   app.use("/episodes", episodesRouter);
   app.use("/webhooks", webhooksRouter);
   app.use("/tts", ttsRouter);
+  app.use("/users", usersRouter);
 
   // 404 handler
   app.use((req, res) => {

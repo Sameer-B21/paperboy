@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router';
 
 import { Fonts } from '@/constants/theme';
+import { updateUserPreferences } from '@/data/backend';
 import { setOnboardingStep, setPodcastDurationMinutes } from '@/data/session';
 
 const palette = {
@@ -41,6 +42,11 @@ export default function DurationScreen() {
     setErrorMessage(null);
     setIsSubmitting(true);
     await setPodcastDurationMinutes(parsedMinutes.toString());
+    try {
+      await updateUserPreferences({ podcastDurationMinutes: parsedMinutes });
+    } catch {
+      // ignore — local pref is saved
+    }
     await setOnboardingStep('complete');
     router.replace({ pathname: '/today', params: { generate: '1' } });
   };

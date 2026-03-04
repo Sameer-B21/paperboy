@@ -5,6 +5,7 @@ import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-nativ
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
+import { updateUserPreferences } from '@/data/backend';
 import { getPodcastDurationMinutes, setPodcastDurationMinutes } from '@/data/session';
 
 const palette = {
@@ -43,6 +44,11 @@ export default function DurationSettingsScreen() {
     if (!isValid || isSaving) return;
     setIsSaving(true);
     await setPodcastDurationMinutes(parsedMinutes.toString());
+    try {
+      await updateUserPreferences({ podcastDurationMinutes: parsedMinutes });
+    } catch {
+      // ignore — local pref is saved, backend will retry on next generate
+    }
     setIsSaving(false);
     setSaved(true);
     setTimeout(() => router.back(), 600);

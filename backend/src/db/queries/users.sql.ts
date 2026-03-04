@@ -6,6 +6,7 @@ type UserRow = {
   id: string;
   email: string;
   name: string | null;
+  podcast_duration_minutes: number | null;
   created_at: string;
 };
 
@@ -15,6 +16,7 @@ function toUser(row: UserRow): User {
     id: row.id,
     email: row.email,
     name: row.name,
+    podcastDurationMinutes: row.podcast_duration_minutes,
     createdAt: row.created_at,
   };
 }
@@ -60,6 +62,27 @@ export async function getOrCreateUserByEmail(
     return existing;
   }
   return createUser(email, name);
+}
+
+// Updates user preferences
+export async function updateUser(
+  userId: string,
+  updates: { podcastDurationMinutes?: number }
+): Promise<User> {
+  const payload: Record<string, unknown> = {};
+  if (updates.podcastDurationMinutes !== undefined) {
+    payload.podcast_duration_minutes = updates.podcastDurationMinutes;
+  }
+  const { data, error } = await supabase
+    .from("users")
+    .update(payload)
+    .eq("id", userId)
+    .select("*")
+    .single();
+  if (error || !data) {
+    throw new Error(`Failed to update user: ${error?.message ?? "Unknown error"}`);
+  }
+  return toUser(data as UserRow);
 }
 
 // Lists all users in the database

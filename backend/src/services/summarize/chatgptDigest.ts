@@ -107,6 +107,7 @@ function extractJson(content: string): { summary: string; script: string } | nul
 export async function buildDailyDigestScript(payload: {
   dateLabel: string;
   items: DigestItem[];
+  durationMinutes?: number;
 }): Promise<{ summary: string; script: string }> {
   if (!env.OPENAI_API_KEY) {
     throw new Error("Missing OPENAI_API_KEY.");
@@ -160,8 +161,8 @@ export async function buildDailyDigestScript(payload: {
             Segments introduced with: \“Moving on to {Newsletter Name}…\”
             End with “One Thing to Remember Today” and a short reflection`+
 
-            `Length: ${PODCAST_LENGTH} minutes` +
-            "Return JSON with keys \"summary\" (2-4 sentences) and \"script\" (4-6 minute read). " +
+            `Length: ${payload.durationMinutes ?? 8} minutes. ` +
+            `Return JSON with keys "summary" (2-4 sentences) and "script" (a ${payload.durationMinutes ?? 8}-minute read). ` +
             `Newsletters:`, 
             input,
         },

@@ -6,7 +6,7 @@ import {
   updateEpisode,
 } from "../../db/queries/episodes.sql.js";
 import { listNewsletters } from "../../db/queries/newsletters.sql.js";
-import { listUsers } from "../../db/queries/users.sql.js";
+import { getUserById, listUsers } from "../../db/queries/users.sql.js";
 import { uploadAudio } from "../../services/storage/uploadAudio.js";
 import { buildDailyDigestScript } from "../../services/summarize/chatgptDigest.js";
 import { generateAudio } from "../../services/tts/generateAudio.js";
@@ -161,7 +161,9 @@ export async function runDailyDigestForUser(
 
   try {
     // Build the daily digest script
-    const { summary, script } = await buildDailyDigestScript({ dateLabel, items });
+    const user = await getUserById(userId);
+    const durationMinutes = user?.podcastDurationMinutes ?? 8;
+    const { summary, script } = await buildDailyDigestScript({ dateLabel, items, durationMinutes });
     await updateEpisode(digestEpisode.id, { summary, script, voice: resolvedVoice });
 
     // Generate audio and upload

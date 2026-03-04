@@ -180,6 +180,20 @@ export async function generateDailyEpisode(voice?: string): Promise<EpisodeDetai
   return (await response.json()) as EpisodeDetail;
 }
 
+export async function updateUserPreferences(prefs: {
+  podcastDurationMinutes?: number;
+}): Promise<void> {
+  await requireUserId();
+  const response = await fetch(`${API_BASE_URL}/users/me`, {
+    method: 'PATCH',
+    headers: await buildHeaders(true),
+    body: JSON.stringify(prefs),
+  });
+  if (!response.ok) {
+    throw new Error('Unable to update preferences.');
+  }
+}
+
 export async function getLatestDailyEpisode(): Promise<EpisodeDetail | null> {
   await requireUserId();
   const response = await fetch(`${API_BASE_URL}/episodes/daily/latest`, {
