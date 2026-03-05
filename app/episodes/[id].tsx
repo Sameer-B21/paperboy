@@ -107,7 +107,7 @@ export default function EpisodeDetailScreen() {
       }
     };
     void loadEpisode();
-  }, [id]);
+  }, [id, hasUser]);
 
   const voiceLabel = voiceLabelByValue[episode?.voice ?? ''] ?? 'Alloy';
 
