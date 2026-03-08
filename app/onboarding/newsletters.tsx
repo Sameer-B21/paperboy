@@ -14,19 +14,7 @@ import { useRouter } from 'expo-router';
 import { Fonts } from '@/constants/theme';
 import { listNewsletters, syncGmail, updateNewsletterSelection } from '@/data/backend';
 import { setOnboardingStep } from '@/data/session';
-
-const palette = {
-  background: '#F6F1E9',
-  card: '#FBF8F2',
-  surface: '#FDFBF7',
-  primaryText: '#2E2A26',
-  secondaryText: '#8F877C',
-  accent: '#C78B5A',
-  accentDark: '#B57846',
-  border: '#E7DED3',
-  icon: '#6F675D',
-  glow: '#F0E7DA',
-};
+import { usePalette } from '@/hooks/use-palette';
 
 const MAX_NEWSLETTERS_PER_USER = 10;
 
@@ -40,6 +28,7 @@ type Newsletter = {
 export default function NewsletterSelectScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const palette = usePalette();
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -120,6 +109,153 @@ export default function NewsletterSelectScreen() {
     router.push('/onboarding/voice');
   };
 
+  const styles = useMemo(() => StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: palette.background,
+    },
+    backgroundGlow: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: '#F7EFE5',
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingBottom: 32,
+    },
+    hero: {
+      marginBottom: 18,
+    },
+    kicker: {
+      fontSize: 12,
+      letterSpacing: 1.1,
+      textTransform: 'uppercase',
+      color: palette.secondaryText,
+      fontFamily: Fonts.rounded,
+      marginBottom: 8,
+    },
+    title: {
+      fontSize: 26,
+      color: palette.primaryText,
+      fontFamily: Fonts.serif,
+      marginBottom: 6,
+    },
+    subtitle: {
+      fontSize: 14,
+      lineHeight: 20,
+      color: palette.secondaryText,
+      fontFamily: Fonts.sans,
+    },
+    selectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    selectionTitle: {
+      fontSize: 15,
+      fontFamily: Fonts.rounded,
+      color: palette.primaryText,
+    },
+    metaPill: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+      backgroundColor: palette.surface,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    metaText: {
+      fontSize: 12,
+      color: palette.secondaryText,
+      fontFamily: Fonts.sans,
+    },
+    loadingCard: {
+      backgroundColor: palette.card,
+      borderRadius: 18,
+      padding: 20,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: palette.border,
+      marginBottom: 18,
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 13,
+      color: palette.secondaryText,
+      fontFamily: Fonts.sans,
+    },
+    list: {
+      gap: 12,
+      marginBottom: 18,
+    },
+    listItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: palette.surface,
+      borderRadius: 16,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    listItemSelected: {
+      borderColor: palette.accent,
+      shadowColor: palette.accentDark,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.15,
+      shadowRadius: 10,
+    },
+    listText: {
+      flex: 1,
+      marginRight: 12,
+    },
+    listTitle: {
+      fontSize: 15,
+      fontFamily: Fonts.rounded,
+      color: palette.primaryText,
+      marginBottom: 4,
+    },
+    listSubtitle: {
+      fontSize: 12,
+      color: palette.secondaryText,
+      fontFamily: Fonts.sans,
+    },
+    checkbox: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      borderWidth: 1,
+      borderColor: palette.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#fff',
+    },
+    checkboxSelected: {
+      backgroundColor: palette.accent,
+      borderColor: palette.accent,
+    },
+    statusText: {
+      fontSize: 13,
+      color: palette.secondaryText,
+      fontFamily: Fonts.sans,
+      marginBottom: 12,
+    },
+    primaryButton: {
+      backgroundColor: palette.accent,
+      borderRadius: 16,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    primaryButtonDisabled: {
+      opacity: 0.6,
+    },
+    primaryButtonText: {
+      color: '#fff',
+      fontSize: 16,
+      fontFamily: Fonts.rounded,
+    },
+  }), [palette]);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <View style={styles.backgroundGlow} pointerEvents="none" />
@@ -188,150 +324,3 @@ export default function NewsletterSelectScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: palette.background,
-  },
-  backgroundGlow: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#F7EFE5',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-  },
-  hero: {
-    marginBottom: 18,
-  },
-  kicker: {
-    fontSize: 12,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-    color: palette.secondaryText,
-    fontFamily: Fonts.rounded,
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 26,
-    color: palette.primaryText,
-    fontFamily: Fonts.serif,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: palette.secondaryText,
-    fontFamily: Fonts.sans,
-  },
-  selectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  selectionTitle: {
-    fontSize: 15,
-    fontFamily: Fonts.rounded,
-    color: palette.primaryText,
-  },
-  metaPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  metaText: {
-    fontSize: 12,
-    color: palette.secondaryText,
-    fontFamily: Fonts.sans,
-  },
-  loadingCard: {
-    backgroundColor: palette.card,
-    borderRadius: 18,
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: palette.border,
-    marginBottom: 18,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 13,
-    color: palette.secondaryText,
-    fontFamily: Fonts.sans,
-  },
-  list: {
-    gap: 12,
-    marginBottom: 18,
-  },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: palette.surface,
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  listItemSelected: {
-    borderColor: palette.accent,
-    shadowColor: palette.accentDark,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-  },
-  listText: {
-    flex: 1,
-    marginRight: 12,
-  },
-  listTitle: {
-    fontSize: 15,
-    fontFamily: Fonts.rounded,
-    color: palette.primaryText,
-    marginBottom: 4,
-  },
-  listSubtitle: {
-    fontSize: 12,
-    color: palette.secondaryText,
-    fontFamily: Fonts.sans,
-  },
-  checkbox: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 1,
-    borderColor: palette.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  checkboxSelected: {
-    backgroundColor: palette.accent,
-    borderColor: palette.accent,
-  },
-  statusText: {
-    fontSize: 13,
-    color: palette.secondaryText,
-    fontFamily: Fonts.sans,
-    marginBottom: 12,
-  },
-  primaryButton: {
-    backgroundColor: palette.accent,
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  primaryButtonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: Fonts.rounded,
-  },
-});

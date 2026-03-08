@@ -1,29 +1,19 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Link, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
 import { listEpisodes } from '@/data/backend';
 import { useRequireUser } from '@/hooks/use-require-user';
-
-const palette = {
-  background: '#F6F1E9',
-  card: '#FBF8F2',
-  surface: '#FDFBF7',
-  primaryText: '#2E2A26',
-  secondaryText: '#8F877C',
-  accent: '#C78B5A',
-  border: '#E7DED3',
-  icon: '#6F675D',
-  glow: '#F0E7DA',
-};
+import { usePalette } from '@/hooks/use-palette';
 
 export default function ArchiveScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { hasUser } = useRequireUser();
+  const palette = usePalette();
   const [episodes, setEpisodes] = useState<
     Array<{
       id: string;
@@ -74,6 +64,162 @@ export default function ArchiveScreen() {
     void loadEpisodes();
   }, [hasUser]);
 
+  const styles = useMemo(() => StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: palette.background,
+    },
+    backgroundGlow: {
+      position: 'absolute',
+      top: -140,
+      right: -100,
+      width: 280,
+      height: 280,
+      borderRadius: 140,
+      backgroundColor: palette.glow,
+      opacity: 0.7,
+    },
+    scrollContent: {
+      paddingTop: 16,
+      paddingHorizontal: 22,
+      paddingBottom: 80,
+    },
+    headerRow: {
+      // flexDirection: 'row',
+      // alignItems: 'center',
+      // justifyContent: 'space-between',
+      // marginBottom: 24,
+      paddingVertical: 16,
+      backgroundColor: palette.card,
+      paddingHorizontal: 22,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 24,
+      // shadowColor: '#000000',
+      // shadowOpacity: 0.06,
+      // shadowRadius: 18,
+      // shadowOffset: { width: 0, height: 12 },
+    },
+    headerTitle: {
+      color: palette.primaryText,
+      fontSize: 20,
+      fontFamily: Fonts.serif,
+      letterSpacing: 0.4,
+      textAlign: 'center',
+      flex: 1,
+    },
+    headerSpacer: {
+      width: 36,
+    },
+    iconButton: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 12,
+      // backgroundColor: palette.surface,
+      // borderWidth: 1,
+      // borderColor: palette.border,
+    },
+    heroCard: {
+      borderRadius: 22,
+      paddingVertical: 20,
+      paddingHorizontal: 20,
+      gap: 12,
+      marginBottom: 24,
+      backgroundColor: palette.card,
+      borderWidth: 1,
+      borderColor: palette.border,
+      shadowColor: '#000000',
+      shadowOpacity: 0.05,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 2,
+    },
+    dateText: {
+      color: palette.secondaryText,
+      fontSize: 12,
+      fontFamily: Fonts.sans,
+      letterSpacing: 1.6,
+      textTransform: 'uppercase',
+    },
+    title: {
+      color: palette.primaryText,
+      fontSize: 22,
+      fontFamily: Fonts.serif,
+    },
+    listHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    listTitle: {
+      color: palette.primaryText,
+      fontSize: 18,
+      fontFamily: Fonts.serif,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      gap: 8,
+      flexWrap: 'wrap',
+      marginBottom: 12,
+    },
+    metaPill: {
+      backgroundColor: palette.surface,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    metaText: {
+      color: palette.secondaryText,
+      fontSize: 12,
+      fontFamily: Fonts.sans,
+      letterSpacing: 0.2,
+      textTransform: 'capitalize',
+    },
+    summaryText: {
+      color: palette.secondaryText,
+      fontSize: 15,
+      lineHeight: 22,
+      fontFamily: Fonts.sans,
+    },
+    episodeCard: {
+      backgroundColor: palette.surface,
+      borderRadius: 18,
+      padding: 20,
+      marginBottom: 14,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    episodeHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 6,
+    },
+    episodeDate: {
+      color: palette.secondaryText,
+      fontSize: 14,
+      fontFamily: Fonts.sans,
+    },
+    episodeTitle: {
+      color: palette.primaryText,
+      fontSize: 18,
+      fontFamily: Fonts.serif,
+      marginBottom: 10,
+    },
+    episodeSummary: {
+      color: palette.secondaryText,
+      fontSize: 14,
+      lineHeight: 20,
+      fontFamily: Fonts.sans,
+    },
+  }), [palette]);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
       <View style={styles.backgroundGlow} />
@@ -104,7 +250,7 @@ export default function ArchiveScreen() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        
+
 
         {/* <View style={styles.heroCard}>
           <Text style={styles.dateText}>Past newsletters</Text>
@@ -160,159 +306,3 @@ export default function ArchiveScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: palette.background,
-  },
-  backgroundGlow: {
-    position: 'absolute',
-    top: -140,
-    right: -100,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: palette.glow,
-    opacity: 0.7,
-  },
-  scrollContent: {
-    paddingTop: 16,
-    paddingHorizontal: 22,
-    paddingBottom: 80,
-  },
-  headerRow: {
-    // flexDirection: 'row',
-    // alignItems: 'center',
-    // justifyContent: 'space-between',
-    // marginBottom: 24,
-    paddingVertical: 16,
-    backgroundColor: palette.card,
-    paddingHorizontal: 22,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    // shadowColor: '#000000',
-    // shadowOpacity: 0.06,
-    // shadowRadius: 18,
-    // shadowOffset: { width: 0, height: 12 },
-  },
-  headerTitle: {
-    color: palette.primaryText,
-    fontSize: 20,
-    fontFamily: Fonts.serif,
-    letterSpacing: 0.4,
-    textAlign: 'center',
-    flex: 1,
-  },
-  headerSpacer: {
-    width: 36,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    // backgroundColor: palette.surface,
-    // borderWidth: 1,
-    // borderColor: palette.border,
-  },
-  heroCard: {
-    borderRadius: 22,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    gap: 12,
-    marginBottom: 24,
-    backgroundColor: palette.card,
-    borderWidth: 1,
-    borderColor: palette.border,
-    shadowColor: '#000000',
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 2,
-  },
-  dateText: {
-    color: palette.secondaryText,
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
-  },
-  title: {
-    color: palette.primaryText,
-    fontSize: 22,
-    fontFamily: Fonts.serif,
-  },
-  listHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  listTitle: {
-    color: palette.primaryText,
-    fontSize: 18,
-    fontFamily: Fonts.serif,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-    marginBottom: 12,
-  },
-  metaPill: {
-    backgroundColor: palette.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  metaText: {
-    color: palette.secondaryText,
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    letterSpacing: 0.2,
-    textTransform: 'capitalize',
-  },
-  summaryText: {
-    color: palette.secondaryText,
-    fontSize: 15,
-    lineHeight: 22,
-    fontFamily: Fonts.sans,
-  },
-  episodeCard: {
-    backgroundColor: palette.surface,
-    borderRadius: 18,
-    padding: 20,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  episodeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  episodeDate: {
-    color: palette.secondaryText,
-    fontSize: 14,
-    fontFamily: Fonts.sans,
-  },
-  episodeTitle: {
-    color: palette.primaryText,
-    fontSize: 18,
-    fontFamily: Fonts.serif,
-    marginBottom: 10,
-  },
-  episodeSummary: {
-    color: palette.secondaryText,
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: Fonts.sans,
-  },
-});

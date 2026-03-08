@@ -1,26 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ExpoLinking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
 import { fetchAuthUrl } from '@/data/backend';
 import { setOnboardingStep, setUserEmail, setUserId } from '@/data/session';
-
-const palette = {
-  background: '#F6F1E9',
-  card: '#FBF8F2',
-  surface: '#FDFBF7',
-  primaryText: '#2E2A26',
-  secondaryText: '#8F877C',
-  accent: '#C78B5A',
-  accentDark: '#B57846',
-  border: '#E7DED3',
-  icon: '#6F675D',
-  glow: '#F0E7DA',
-};
+import { usePalette } from '@/hooks/use-palette';
 
 export default function ConnectScreen() {
   const params = useLocalSearchParams<{
@@ -32,6 +20,7 @@ export default function ConnectScreen() {
   const { userId, email, connected, isNew } = params;
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const palette = usePalette();
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -68,6 +57,120 @@ export default function ConnectScreen() {
       setIsConnecting(false);
     }
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: palette.background,
+    },
+    backgroundOrbs: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    orbLarge: {
+      position: 'absolute',
+      top: -70,
+      right: -110,
+      width: 240,
+      height: 240,
+      borderRadius: 120,
+      backgroundColor: '#F3E8DA',
+      opacity: 0.7,
+    },
+    orbSmall: {
+      position: 'absolute',
+      bottom: 100,
+      left: -90,
+      width: 170,
+      height: 170,
+      borderRadius: 85,
+      backgroundColor: '#F7EADF',
+      opacity: 0.6,
+    },
+    orbHighlight: {
+      position: 'absolute',
+      top: 200,
+      left: 30,
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      backgroundColor: '#FCEFE2',
+      opacity: 0.8,
+    },
+    container: {
+      flex: 1,
+      paddingHorizontal: 20,
+    },
+    hero: {
+      marginBottom: 24,
+    },
+    kicker: {
+      fontSize: 12,
+      letterSpacing: 1.1,
+      textTransform: 'uppercase',
+      color: palette.secondaryText,
+      fontFamily: Fonts.rounded,
+      marginBottom: 10,
+    },
+    title: {
+      fontSize: 28,
+      color: palette.primaryText,
+      fontFamily: Fonts.serif,
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 15,
+      lineHeight: 22,
+      color: palette.secondaryText,
+      fontFamily: Fonts.sans,
+    },
+    card: {
+      backgroundColor: palette.card,
+      borderRadius: 18,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: palette.border,
+    },
+    cardRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+      gap: 12,
+    },
+    cardText: {
+      flex: 1,
+    },
+    cardTitle: {
+      fontSize: 16,
+      fontFamily: Fonts.rounded,
+      color: palette.primaryText,
+      marginBottom: 4,
+    },
+    cardSubtitle: {
+      fontSize: 13,
+      color: palette.secondaryText,
+      fontFamily: Fonts.sans,
+    },
+    primaryButton: {
+      backgroundColor: palette.accent,
+      borderRadius: 16,
+      paddingVertical: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'row',
+      gap: 8,
+    },
+    primaryButtonText: {
+      color: '#fff',
+      fontSize: 16,
+      fontFamily: Fonts.rounded,
+    },
+    statusText: {
+      marginTop: 12,
+      fontSize: 13,
+      color: palette.secondaryText,
+      fontFamily: Fonts.sans,
+    },
+  }), [palette]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -117,117 +220,3 @@ export default function ConnectScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: palette.background,
-  },
-  backgroundOrbs: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  orbLarge: {
-    position: 'absolute',
-    top: -70,
-    right: -110,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: '#F3E8DA',
-    opacity: 0.7,
-  },
-  orbSmall: {
-    position: 'absolute',
-    bottom: 100,
-    left: -90,
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    backgroundColor: '#F7EADF',
-    opacity: 0.6,
-  },
-  orbHighlight: {
-    position: 'absolute',
-    top: 200,
-    left: 30,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#FCEFE2',
-    opacity: 0.8,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  hero: {
-    marginBottom: 24,
-  },
-  kicker: {
-    fontSize: 12,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-    color: palette.secondaryText,
-    fontFamily: Fonts.rounded,
-    marginBottom: 10,
-  },
-  title: {
-    fontSize: 28,
-    color: palette.primaryText,
-    fontFamily: Fonts.serif,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: palette.secondaryText,
-    fontFamily: Fonts.sans,
-  },
-  card: {
-    backgroundColor: palette.card,
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
-  },
-  cardText: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontFamily: Fonts.rounded,
-    color: palette.primaryText,
-    marginBottom: 4,
-  },
-  cardSubtitle: {
-    fontSize: 13,
-    color: palette.secondaryText,
-    fontFamily: Fonts.sans,
-  },
-  primaryButton: {
-    backgroundColor: palette.accent,
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: Fonts.rounded,
-  },
-  statusText: {
-    marginTop: 12,
-    fontSize: 13,
-    color: palette.secondaryText,
-    fontFamily: Fonts.sans,
-  },
-});

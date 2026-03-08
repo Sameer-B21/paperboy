@@ -16,19 +16,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Fonts } from '@/constants/theme';
 import { fetchAuthUrl, listNewsletters, syncGmail, updateNewsletterSelection } from '@/data/backend';
 import { getUserId } from '@/data/session';
-
-const palette = {
-  background: '#F6F1E9',
-  card: '#FBF8F2',
-  surface: '#FDFBF7',
-  primaryText: '#2E2A26',
-  secondaryText: '#8F877C',
-  accent: '#C78B5A',
-  accentDark: '#B57846',
-  border: '#E7DED3',
-  icon: '#6F675D',
-  glow: '#F0E7DA',
-};
+import { usePalette } from '@/hooks/use-palette';
 
 const MAX_NEWSLETTERS_PER_USER = 10;
 
@@ -42,6 +30,7 @@ type Newsletter = {
 export default function NewslettersScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const palette = usePalette();
 
   const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,6 +112,160 @@ export default function NewslettersScreen() {
       setStatusMessage(error instanceof Error ? error.message : 'Unable to start Gmail auth.');
     }
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: palette.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 22,
+      paddingBottom: 16,
+      backgroundColor: palette.card,
+      marginBottom: 8,
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 12,
+    },
+    headerTitle: {
+      flex: 1,
+      textAlign: 'center',
+      color: palette.primaryText,
+      fontSize: 20,
+      fontFamily: Fonts.serif,
+      letterSpacing: 0.4,
+    },
+    headerSpacer: {
+      width: 36,
+    },
+    scrollContent: {
+      paddingHorizontal: 22,
+      paddingBottom: 48,
+      paddingTop: 16,
+    },
+    syncButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 12,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: palette.border,
+      backgroundColor: palette.card,
+      marginBottom: 16,
+    },
+    syncButtonText: {
+      color: palette.accentDark,
+      fontSize: 14,
+      fontFamily: Fonts.sans,
+      fontWeight: '600',
+    },
+    connectButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 12,
+      borderRadius: 14,
+      backgroundColor: palette.accent,
+      marginBottom: 16,
+    },
+    connectButtonText: {
+      color: '#fff',
+      fontSize: 14,
+      fontFamily: Fonts.sans,
+      fontWeight: '600',
+    },
+    statusMessage: {
+      color: palette.secondaryText,
+      fontSize: 13,
+      fontFamily: Fonts.sans,
+      marginBottom: 16,
+      textAlign: 'center',
+    },
+    sectionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+      marginHorizontal: 4,
+    },
+    sectionLabel: {
+      color: palette.secondaryText,
+      fontSize: 11,
+      fontFamily: Fonts.sans,
+      fontWeight: '600',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+    },
+    countLabel: {
+      color: palette.secondaryText,
+      fontSize: 12,
+      fontFamily: Fonts.sans,
+    },
+    loadingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      padding: 20,
+    },
+    emptyCard: {
+      backgroundColor: palette.card,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: palette.border,
+      padding: 20,
+    },
+    emptyText: {
+      color: palette.secondaryText,
+      fontSize: 14,
+      fontFamily: Fonts.sans,
+      lineHeight: 20,
+    },
+    listCard: {
+      backgroundColor: palette.card,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: palette.border,
+      overflow: 'hidden',
+    },
+    listRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      gap: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: palette.border,
+    },
+    listRowLast: {
+      borderBottomWidth: 0,
+    },
+    listInfo: {
+      flex: 1,
+    },
+    listTitle: {
+      color: palette.primaryText,
+      fontSize: 15,
+      fontFamily: Fonts.sans,
+      fontWeight: '600',
+    },
+    listSender: {
+      color: palette.secondaryText,
+      fontSize: 12,
+      fontFamily: Fonts.sans,
+      marginTop: 2,
+    },
+  }), [palette]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -206,157 +349,3 @@ export default function NewslettersScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: palette.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 22,
-    paddingBottom: 16,
-    backgroundColor: palette.card,
-    marginBottom: 8,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    color: palette.primaryText,
-    fontSize: 20,
-    fontFamily: Fonts.serif,
-    letterSpacing: 0.4,
-  },
-  headerSpacer: {
-    width: 36,
-  },
-  scrollContent: {
-    paddingHorizontal: 22,
-    paddingBottom: 48,
-    paddingTop: 16,
-  },
-  syncButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: palette.border,
-    backgroundColor: palette.card,
-    marginBottom: 16,
-  },
-  syncButtonText: {
-    color: palette.accentDark,
-    fontSize: 14,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  connectButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: palette.accent,
-    marginBottom: 16,
-  },
-  connectButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  statusMessage: {
-    color: palette.secondaryText,
-    fontSize: 13,
-    fontFamily: Fonts.sans,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  sectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    marginHorizontal: 4,
-  },
-  sectionLabel: {
-    color: palette.secondaryText,
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  countLabel: {
-    color: palette.secondaryText,
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 20,
-  },
-  emptyCard: {
-    backgroundColor: palette.card,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: 20,
-  },
-  emptyText: {
-    color: palette.secondaryText,
-    fontSize: 14,
-    fontFamily: Fonts.sans,
-    lineHeight: 20,
-  },
-  listCard: {
-    backgroundColor: palette.card,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    overflow: 'hidden',
-  },
-  listRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.border,
-  },
-  listRowLast: {
-    borderBottomWidth: 0,
-  },
-  listInfo: {
-    flex: 1,
-  },
-  listTitle: {
-    color: palette.primaryText,
-    fontSize: 15,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  listSender: {
-    color: palette.secondaryText,
-    fontSize: 12,
-    fontFamily: Fonts.sans,
-    marginTop: 2,
-  },
-});

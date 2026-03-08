@@ -7,18 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Fonts } from '@/constants/theme';
 import { updateUserPreferences } from '@/data/backend';
 import { getPodcastDurationMinutes, setPodcastDurationMinutes } from '@/data/session';
-
-const palette = {
-  background: '#F6F1E9',
-  card: '#FBF8F2',
-  surface: '#FDFBF7',
-  primaryText: '#2E2A26',
-  secondaryText: '#8F877C',
-  accent: '#C78B5A',
-  accentDark: '#B57846',
-  border: '#E7DED3',
-  icon: '#6F675D',
-};
+import { usePalette } from '@/hooks/use-palette';
 
 const MIN_MINUTES = 5;
 const MAX_MINUTES = 30;
@@ -26,6 +15,7 @@ const MAX_MINUTES = 30;
 export default function DurationSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const palette = usePalette();
   const [minutes, setMinutes] = useState('8');
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -53,6 +43,90 @@ export default function DurationSettingsScreen() {
     setSaved(true);
     setTimeout(() => router.back(), 600);
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: palette.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 22,
+      paddingBottom: 16,
+      backgroundColor: palette.card,
+      marginBottom: 8,
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 12,
+    },
+    headerTitle: {
+      flex: 1,
+      textAlign: 'center',
+      color: palette.primaryText,
+      fontSize: 20,
+      fontFamily: Fonts.serif,
+      letterSpacing: 0.4,
+    },
+    headerSpacer: {
+      width: 36,
+    },
+    content: {
+      paddingHorizontal: 22,
+      paddingTop: 16,
+    },
+    card: {
+      backgroundColor: palette.card,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: palette.border,
+      padding: 18,
+      marginBottom: 16,
+    },
+    label: {
+      color: palette.secondaryText,
+      fontSize: 13,
+      fontFamily: Fonts.sans,
+      marginBottom: 10,
+    },
+    input: {
+      backgroundColor: palette.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: palette.border,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 22,
+      color: palette.primaryText,
+      fontFamily: Fonts.sans,
+    },
+    helper: {
+      marginTop: 8,
+      fontSize: 12,
+      color: palette.secondaryText,
+      fontFamily: Fonts.sans,
+    },
+    saveButton: {
+      backgroundColor: palette.accent,
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: 'center',
+    },
+    saveButtonDisabled: {
+      opacity: 0.5,
+    },
+    saveButtonText: {
+      color: '#fff',
+      fontSize: 15,
+      fontFamily: Fonts.sans,
+      fontWeight: '600',
+    },
+  }), [palette]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -91,87 +165,3 @@ export default function DurationSettingsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: palette.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 22,
-    paddingBottom: 16,
-    backgroundColor: palette.card,
-    marginBottom: 8,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    color: palette.primaryText,
-    fontSize: 20,
-    fontFamily: Fonts.serif,
-    letterSpacing: 0.4,
-  },
-  headerSpacer: {
-    width: 36,
-  },
-  content: {
-    paddingHorizontal: 22,
-    paddingTop: 16,
-  },
-  card: {
-    backgroundColor: palette.card,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: 18,
-    marginBottom: 16,
-  },
-  label: {
-    color: palette.secondaryText,
-    fontSize: 13,
-    fontFamily: Fonts.sans,
-    marginBottom: 10,
-  },
-  input: {
-    backgroundColor: palette.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: palette.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 22,
-    color: palette.primaryText,
-    fontFamily: Fonts.sans,
-  },
-  helper: {
-    marginTop: 8,
-    fontSize: 12,
-    color: palette.secondaryText,
-    fontFamily: Fonts.sans,
-  },
-  saveButton: {
-    backgroundColor: palette.accent,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-});

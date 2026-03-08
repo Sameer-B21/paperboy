@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -26,25 +26,14 @@ import {
   setUserId,
 } from '@/data/session';
 import { useRequireUser } from '@/hooks/use-require-user';
-
-const palette = {
-  background: '#F6F1E9',
-  card: '#FBF8F2',
-  surface: '#FDFBF7',
-  primaryText: '#2E2A26',
-  secondaryText: '#8F877C',
-  accent: '#C78B5A',
-  accentDark: '#B57846',
-  border: '#E7DED3',
-  icon: '#6F675D',
-  glow: '#F0E7DA',
-};
+import { usePalette } from '@/hooks/use-palette';
 
 export default function SettingsScreen() {
   const params = useLocalSearchParams<{ userId?: string; email?: string; connected?: string }>();
   const { userId, email, connected } = params;
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const palette = usePalette();
   useRequireUser({ allowUserId: userId });
 
   const [userEmail, setUserEmailState] = useState('');
@@ -105,6 +94,115 @@ export default function SettingsScreen() {
     activeNewsletterCount > 0
       ? `${activeNewsletterCount} active newsletter${activeNewsletterCount === 1 ? '' : 's'}`
       : 'No newsletters selected';
+
+  const styles = useMemo(() => StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: palette.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 22,
+      paddingBottom: 16,
+      backgroundColor: palette.card,
+      marginBottom: 8,
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 12,
+    },
+    headerTitle: {
+      flex: 1,
+      textAlign: 'center',
+      color: palette.primaryText,
+      fontSize: 20,
+      fontFamily: Fonts.serif,
+      letterSpacing: 0.4,
+    },
+    headerSpacer: {
+      width: 36,
+    },
+    scrollContent: {
+      paddingHorizontal: 22,
+      paddingBottom: 48,
+      paddingTop: 16,
+    },
+    sectionLabel: {
+      color: palette.secondaryText,
+      fontSize: 11,
+      fontFamily: Fonts.sans,
+      fontWeight: '600',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      marginBottom: 8,
+      marginLeft: 4,
+    },
+    card: {
+      backgroundColor: palette.card,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: palette.border,
+      marginBottom: 28,
+      overflow: 'hidden',
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      gap: 14,
+    },
+    iconBubble: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: palette.surface,
+      borderWidth: 1,
+      borderColor: palette.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    rowContent: {
+      flex: 1,
+    },
+    rowTitle: {
+      color: palette.primaryText,
+      fontSize: 15,
+      fontFamily: Fonts.sans,
+      fontWeight: '600',
+    },
+    rowSubtitle: {
+      color: palette.secondaryText,
+      fontSize: 13,
+      fontFamily: Fonts.sans,
+      marginTop: 2,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: palette.border,
+      marginLeft: 66,
+    },
+    logoutButton: {
+      marginTop: 4,
+      paddingVertical: 14,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: '#E0B6A4',
+      backgroundColor: '#F5E7E0',
+      alignItems: 'center',
+    },
+    logoutText: {
+      color: '#B4544A',
+      fontSize: 15,
+      fontFamily: Fonts.sans,
+      fontWeight: '600',
+    },
+  }), [palette]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -190,6 +288,24 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        <Text style={styles.sectionLabel}>Podcast</Text>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => router.push('/today?generate=1')}
+          >
+            <View style={styles.iconBubble}>
+              <Ionicons name="refresh-outline" size={18} color={palette.icon} />
+            </View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowTitle}>Generate New Podcast</Text>
+              <Text style={styles.rowSubtitle}>Create a fresh episode from your latest newsletters</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
+          </TouchableOpacity>
+        </View>
+
         {isConnected ? (
           <TouchableOpacity style={styles.logoutButton} activeOpacity={0.85} onPress={handleLogout}>
             <Text style={styles.logoutText}>Log out</Text>
@@ -199,112 +315,3 @@ export default function SettingsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: palette.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 22,
-    paddingBottom: 16,
-    backgroundColor: palette.card,
-    marginBottom: 8,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    color: palette.primaryText,
-    fontSize: 20,
-    fontFamily: Fonts.serif,
-    letterSpacing: 0.4,
-  },
-  headerSpacer: {
-    width: 36,
-  },
-  scrollContent: {
-    paddingHorizontal: 22,
-    paddingBottom: 48,
-    paddingTop: 16,
-  },
-  sectionLabel: {
-    color: palette.secondaryText,
-    fontSize: 11,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  card: {
-    backgroundColor: palette.card,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    marginBottom: 28,
-    overflow: 'hidden',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 14,
-  },
-  iconBubble: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowContent: {
-    flex: 1,
-  },
-  rowTitle: {
-    color: palette.primaryText,
-    fontSize: 15,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  rowSubtitle: {
-    color: palette.secondaryText,
-    fontSize: 13,
-    fontFamily: Fonts.sans,
-    marginTop: 2,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: palette.border,
-    marginLeft: 66,
-  },
-  logoutButton: {
-    marginTop: 4,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E0B6A4',
-    backgroundColor: '#F5E7E0',
-    alignItems: 'center',
-  },
-  logoutText: {
-    color: '#B4544A',
-    fontSize: 15,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-});

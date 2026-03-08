@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,18 +8,7 @@ import { API_BASE_URL } from '@/constants/api';
 import { Fonts } from '@/constants/theme';
 import { playPreview, stopPreviewSound } from '@/data/audioPlayer';
 import { getTtsVoice, setTtsVoice } from '@/data/session';
-
-const palette = {
-  background: '#F6F1E9',
-  card: '#FBF8F2',
-  surface: '#FDFBF7',
-  primaryText: '#2E2A26',
-  secondaryText: '#8F877C',
-  accent: '#C78B5A',
-  accentDark: '#B57846',
-  border: '#E7DED3',
-  icon: '#6F675D',
-};
+import { usePalette } from '@/hooks/use-palette';
 
 const voiceOptions = [
   { value: 'alloy', label: 'Alloy', description: 'Balanced and clear.' },
@@ -36,6 +25,7 @@ const voiceOptions = [
 export default function VoiceSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const palette = usePalette();
   const [voice, setVoice] = useState('alloy');
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewVoice, setPreviewVoice] = useState<string | null>(null);
@@ -69,6 +59,93 @@ export default function VoiceSettingsScreen() {
     await setTtsVoice(nextVoice);
     void playVoicePreview(nextVoice);
   };
+
+  const styles = useMemo(() => StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: palette.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 22,
+      paddingBottom: 16,
+      backgroundColor: palette.card,
+      marginBottom: 8,
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 12,
+    },
+    headerTitle: {
+      flex: 1,
+      textAlign: 'center',
+      color: palette.primaryText,
+      fontSize: 20,
+      fontFamily: Fonts.serif,
+      letterSpacing: 0.4,
+    },
+    headerSpacer: {
+      width: 36,
+    },
+    scrollContent: {
+      paddingHorizontal: 22,
+      paddingBottom: 48,
+      paddingTop: 16,
+    },
+    previewText: {
+      color: palette.secondaryText,
+      fontSize: 13,
+      fontFamily: Fonts.sans,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    previewError: {
+      color: '#A34B3F',
+      fontSize: 13,
+      fontFamily: Fonts.sans,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    listCard: {
+      backgroundColor: palette.card,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: palette.border,
+      overflow: 'hidden',
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      gap: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: palette.border,
+    },
+    rowLast: {
+      borderBottomWidth: 0,
+    },
+    rowContent: {
+      flex: 1,
+    },
+    rowTitle: {
+      color: palette.primaryText,
+      fontSize: 15,
+      fontFamily: Fonts.sans,
+      fontWeight: '600',
+    },
+    rowSubtitle: {
+      color: palette.secondaryText,
+      fontSize: 13,
+      fontFamily: Fonts.sans,
+      marginTop: 2,
+    },
+  }), [palette]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -118,90 +195,3 @@ export default function VoiceSettingsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: palette.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 22,
-    paddingBottom: 16,
-    backgroundColor: palette.card,
-    marginBottom: 8,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  headerTitle: {
-    flex: 1,
-    textAlign: 'center',
-    color: palette.primaryText,
-    fontSize: 20,
-    fontFamily: Fonts.serif,
-    letterSpacing: 0.4,
-  },
-  headerSpacer: {
-    width: 36,
-  },
-  scrollContent: {
-    paddingHorizontal: 22,
-    paddingBottom: 48,
-    paddingTop: 16,
-  },
-  previewText: {
-    color: palette.secondaryText,
-    fontSize: 13,
-    fontFamily: Fonts.sans,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  previewError: {
-    color: '#A34B3F',
-    fontSize: 13,
-    fontFamily: Fonts.sans,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  listCard: {
-    backgroundColor: palette.card,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: palette.border,
-    overflow: 'hidden',
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: palette.border,
-  },
-  rowLast: {
-    borderBottomWidth: 0,
-  },
-  rowContent: {
-    flex: 1,
-  },
-  rowTitle: {
-    color: palette.primaryText,
-    fontSize: 15,
-    fontFamily: Fonts.sans,
-    fontWeight: '600',
-  },
-  rowSubtitle: {
-    color: palette.secondaryText,
-    fontSize: 13,
-    fontFamily: Fonts.sans,
-    marginTop: 2,
-  },
-});
