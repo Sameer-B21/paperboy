@@ -22,8 +22,8 @@ import {
   stopPreviewSound,
 } from '@/data/audioPlayer';
 import { getEpisode } from '@/data/backend';
-import { useRequireUser } from '@/hooks/use-require-user';
 import { usePalette } from '@/hooks/use-palette';
+import { useRequireUser } from '@/hooks/use-require-user';
 
 const brandName = 'Paperboy';
 const voiceLabelByValue: Record<string, string> = {
@@ -326,7 +326,7 @@ export default function EpisodeDetailScreen() {
       width: 280,
       height: 280,
       borderRadius: 140,
-      backgroundColor: '#EFE3D3',
+      backgroundColor: palette.glow,
       opacity: 0.5,
     },
     loadingContainer: {
@@ -502,7 +502,7 @@ export default function EpisodeDetailScreen() {
       letterSpacing: 0.3,
     },
     errorText: {
-      color: '#C0392B',
+      color: '#EF4444',
       fontSize: 13,
       fontFamily: Fonts.sans,
     },
@@ -838,7 +838,7 @@ export default function EpisodeDetailScreen() {
           </View>
         ) : null}
 
-        {episode?.script || episode?.summary ? (
+        {/* {episode?.script || episode?.summary ? (
           <View style={styles.summaryCard} accessibilityRole="summary">
             <View style={styles.summaryHeaderRow}>
               <Text style={styles.summaryTitle}>Script</Text>
@@ -862,7 +862,7 @@ export default function EpisodeDetailScreen() {
               <Text style={styles.summaryMeta}>{episode.subject}</Text>
             ) : null}
           </View>
-        ) : null}
+        ) : null} */}
 
       </ScrollView>
     </SafeAreaView>

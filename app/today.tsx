@@ -25,8 +25,8 @@ import {
 } from '@/data/audioPlayer';
 import { generateDailyEpisode, getLatestDailyEpisode } from '@/data/backend';
 import { getTtsVoice } from '@/data/session';
-import { useRequireUser } from '@/hooks/use-require-user';
 import { usePalette } from '@/hooks/use-palette';
+import { useRequireUser } from '@/hooks/use-require-user';
 
 const brandName = 'Paperboy';
 const voiceLabelByValue: Record<string, string> = {
@@ -444,7 +444,7 @@ export default function TodayScreen() {
       width: 280,
       height: 280,
       borderRadius: 140,
-      backgroundColor: '#EFE3D3',
+      backgroundColor: palette.glow,
       opacity: 0.5,
     },
     loadingContainer: {
@@ -533,11 +533,11 @@ export default function TodayScreen() {
       borderWidth: 1,
       borderColor: palette.border,
       shadowColor: '#000000',
-      shadowOpacity: 0.06,
-      shadowRadius: 18,
-      shadowOffset: { width: 0, height: 12 },
-      elevation: 3,
-      width: '80%',
+      shadowOpacity: 0.08,
+      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 4,
+      width: '88%',
     },
     deliveryEyebrow: {
       color: palette.secondaryText,
@@ -588,7 +588,7 @@ export default function TodayScreen() {
       textAlign: 'center',
     },
     errorText: {
-      color: '#C0392B',
+      color: '#EF4444',
     },
     playRow: {
       alignItems: 'center',
@@ -627,12 +627,12 @@ export default function TodayScreen() {
       justifyContent: 'center',
       backgroundColor: palette.accent,
       shadowColor: palette.accentDark,
-      shadowOpacity: 0.35,
-      shadowRadius: 12,
-      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 6 },
     },
     playButtonDisabled: {
-      backgroundColor: '#D8C6B5',
+      backgroundColor: '#D4D4D8',
       shadowOpacity: 0,
     },
     playLabel: {
@@ -702,7 +702,7 @@ export default function TodayScreen() {
       borderRadius: 18,
       borderWidth: 1,
       borderColor: palette.border,
-      width: '80%',
+      width: '88%',
     },
     summaryHeaderRow: {
       flexDirection: 'row',
@@ -923,7 +923,7 @@ export default function TodayScreen() {
           </View>
         </View>}
 
-        {!hasAudio && hasDigest && episodeSummary ? (
+        {/* {!hasAudio && hasDigest && episodeSummary ? (
           <View style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>Today's brief</Text>
             <Text style={styles.summaryText}>{episodeSummary}</Text>
@@ -952,7 +952,7 @@ export default function TodayScreen() {
             ) : null}
             {episodeTitle ? <Text style={styles.summaryMeta}>{episodeTitle}</Text> : null}
           </View>
-        ) : null}
+        ) : null} */}
       </ScrollView>
     </SafeAreaView>
   );

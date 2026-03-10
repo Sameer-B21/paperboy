@@ -73,7 +73,7 @@ export default function ConnectScreen() {
       width: 240,
       height: 240,
       borderRadius: 120,
-      backgroundColor: '#F3E8DA',
+      backgroundColor: '#EEF2FF',
       opacity: 0.7,
     },
     orbSmall: {
@@ -83,7 +83,7 @@ export default function ConnectScreen() {
       width: 170,
       height: 170,
       borderRadius: 85,
-      backgroundColor: '#F7EADF',
+      backgroundColor: '#E0E7FF',
       opacity: 0.6,
     },
     orbHighlight: {
@@ -93,7 +93,7 @@ export default function ConnectScreen() {
       width: 120,
       height: 120,
       borderRadius: 60,
-      backgroundColor: '#FCEFE2',
+      backgroundColor: '#C7D2FE',
       opacity: 0.8,
     },
     container: {

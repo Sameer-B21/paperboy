@@ -105,7 +105,7 @@ export default function VoiceSettingsScreen() {
       textAlign: 'center',
     },
     previewError: {
-      color: '#A34B3F',
+      color: '#DC2626',
       fontSize: 13,
       fontFamily: Fonts.sans,
       marginBottom: 12,

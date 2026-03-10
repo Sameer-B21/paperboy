@@ -116,7 +116,7 @@ export default function NewsletterSelectScreen() {
     },
     backgroundGlow: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: '#F7EFE5',
+      backgroundColor: palette.glow,
     },
     scrollContent: {
       paddingHorizontal: 20,

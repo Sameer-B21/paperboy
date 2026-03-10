@@ -105,7 +105,7 @@ export default function VoiceSelectScreen() {
     },
     previewError: {
       fontSize: 12,
-      color: '#A34B3F',
+      color: '#DC2626',
       fontFamily: Fonts.sans,
       marginBottom: 8,
     },
