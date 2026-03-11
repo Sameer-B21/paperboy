@@ -3,7 +3,6 @@ import * as ExpoLinking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Switch,
@@ -15,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Fonts } from '@/constants/theme';
 import { fetchAuthUrl, listNewsletters, syncGmail, updateNewsletterSelection } from '@/data/backend';
+import { PaperLoader } from '@/components/PaperLoader';
 import { getUserId } from '@/data/session';
 import { usePalette } from '@/hooks/use-palette';
 
@@ -311,9 +311,8 @@ export default function NewslettersScreen() {
         </View>
 
         {isLoading ? (
-          <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={palette.accent} />
-            <Text style={styles.emptyText}>Loading...</Text>
+          <View style={{ height: 160 }}>
+            <PaperLoader />
           </View>
         ) : newsletters.length === 0 ? (
           <View style={styles.emptyCard}>

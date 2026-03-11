@@ -6,6 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Fonts } from '@/constants/theme';
 import { listEpisodes } from '@/data/backend';
+import { PaperLoader } from '@/components/PaperLoader';
 import { useRequireUser } from '@/hooks/use-require-user';
 import { usePalette } from '@/hooks/use-palette';
 
@@ -245,21 +246,14 @@ export default function ArchiveScreen() {
             <Ionicons name="settings-outline" size={20} color={palette.icon} />
           </TouchableOpacity> */}
         </View>
+      {isLoading ? (
+        <PaperLoader />
+      ) : (
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-
-
-        {/* <View style={styles.heroCard}>
-          <Text style={styles.dateText}>Past newsletters</Text>
-          <Text style={styles.title}>Your daily briefing library</Text>
-          <Text style={styles.summaryText}>
-            Revisit earlier episodes in the same calm format you listen to each morning.
-          </Text>
-        </View> */}
-
         <View style={styles.listHeader}>
           <Text style={styles.listTitle}>Saved briefs</Text>
           <View style={styles.metaPill}>
@@ -267,10 +261,7 @@ export default function ArchiveScreen() {
           </View>
         </View>
 
-        {isLoading ? (
-          <Text style={styles.summaryText}>Loading briefs...</Text>
-        ) : (
-          episodes.map((episode) => (
+        {episodes.map((episode) => (
             <Link
               key={episode.id}
               href={{ pathname: '/episodes/[id]', params: { id: episode.id } }}
@@ -300,9 +291,9 @@ export default function ArchiveScreen() {
                 {/* <Text style={styles.episodeSummary}>{episode.summary}</Text> */}
               </TouchableOpacity>
             </Link>
-          ))
-        )}
+          ))}
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

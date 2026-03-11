@@ -25,8 +25,8 @@ import {
   setUserEmail,
   setUserId,
 } from '@/data/session';
-import { useRequireUser } from '@/hooks/use-require-user';
 import { usePalette } from '@/hooks/use-palette';
+import { useRequireUser } from '@/hooks/use-require-user';
 
 export default function SettingsScreen() {
   const params = useLocalSearchParams<{ userId?: string; email?: string; connected?: string }>();

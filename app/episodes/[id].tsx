@@ -3,7 +3,6 @@ import { type AVPlaybackStatus } from 'expo-av';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -22,6 +21,7 @@ import {
   stopPreviewSound,
 } from '@/data/audioPlayer';
 import { getEpisode } from '@/data/backend';
+import { PaperLoader } from '@/components/PaperLoader';
 import { usePalette } from '@/hooks/use-palette';
 import { useRequireUser } from '@/hooks/use-require-user';
 
@@ -675,14 +675,7 @@ export default function EpisodeDetailScreen() {
   if (showLoadingScreen) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
-        <View style={styles.backgroundGlow} />
-        <View style={styles.backgroundBloom} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={palette.icon} />
-          <Text style={styles.loadingText}>
-            {isInitialLoading ? 'Loading your brief...' : 'Loading your briefing duration...'}
-          </Text>
-        </View>
+        <PaperLoader />
       </SafeAreaView>
     );
   }
