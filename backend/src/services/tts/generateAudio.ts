@@ -1,52 +1,50 @@
 import { env } from "../../config/env.js";
 import { logger } from "../../utils/logger.js";
 
-function estimateTokensFromChars(charCount: number): number {
-  return Math.ceil(charCount / 4);
-}
+const voiceMap: Record<string, string> = {
+  rachel: "21m00Tcm4TlvDq8ikWAM",
+  drew: "29vD33N1CtxCmqQRPOHJ",
+  clyde: "2EiwWnXFnvU5JabPnv8n",
+  paul: "5Q0t7uMcjvnagumLfvZi",
+  domi: "AZnzlk1XvdvUeBnXmlld",
+  fin: "D38z5RcWu1voky8WS1ja",
+  sarah: "EXAVITQu4vr4xnSDxMaL",
+  antoni: "ErXwobaYiN019PkySvjV",
+  thomas: "GBv7mTt0atIp3Br8iCZE",
+};
 
-function formatTtsCost(model: string, charCount: number): string {
-  const tokens = estimateTokensFromChars(charCount);
-  const pricePer1MChars = env.OPENAI_TTS_PRICE_PER_1M_CHARS
-    ? Number.parseFloat(env.OPENAI_TTS_PRICE_PER_1M_CHARS)
-    : null;
-
-  if (!pricePer1MChars || Number.isNaN(pricePer1MChars)) {
-    return `chars ${charCount}; est tokens ${tokens}; cost unknown`;
+export async function generateAudio(script: string, voiceName?: string): Promise<Buffer> {
+  if (!env.ELEVENLABS_API_KEY) {
+    throw new Error("Missing ELEVENLABS_API_KEY.");
   }
 
-  const cost = (charCount / 1_000_000) * pricePer1MChars;
-  return `chars ${charCount}; est tokens ${tokens}; est cost $${cost.toFixed(6)}`;
-}
+  const selectedVoice = voiceName?.trim().toLowerCase() || "rachel";
+  const voiceId = voiceMap[selectedVoice] ?? voiceMap.rachel;
 
-// Generate audio with OpenAI's TTS endpoint.
-export async function generateAudio(script: string, voice?: string): Promise<Buffer> {
-  if (!env.OPENAI_API_KEY) {
-    throw new Error("Missing OPENAI_API_KEY.");
-  }
-
-  const model = env.OPENAI_TTS_MODEL ?? "gpt-4o-mini-tts";
-  const selectedVoice = voice?.trim() || env.OPENAI_TTS_VOICE || "alloy";
-  const response = await fetch("https://api.openai.com/v1/audio/speech", {
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
+  const response = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      "xi-api-key": env.ELEVENLABS_API_KEY,
       "Content-Type": "application/json",
+      "Accept": "audio/mpeg",
     },
     body: JSON.stringify({
-      model,
-      voice: selectedVoice,
-      input: script,
-      response_format: "mp3",
+      text: script,
+      model_id: "eleven_monolingual_v1",
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75,
+      },
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`OpenAI TTS request failed: ${response.status} ${errorText}`);
+    throw new Error(`ElevenLabs TTS request failed: ${response.status} ${errorText}`);
   }
 
   const arrayBuffer = await response.arrayBuffer();
-  logger.info(`OpenAI TTS usage (${model}): ${formatTtsCost(model, script.length)}`);
+  logger.info(`ElevenLabs TTS generated successfully for voice ${selectedVoice}`);
   return Buffer.from(arrayBuffer);
 }

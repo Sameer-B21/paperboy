@@ -17,9 +17,15 @@ export async function previewTts(req: Request, res: Response) {
     audioBuffer = cached.data;
     contentType = cached.contentType ?? contentType;
   } catch {
-    const generated = await generateAudio(PREVIEW_SCRIPT, voice);
-    await uploadAudioAtPath(previewPath, generated);
-    audioBuffer = generated;
+    try {
+      const generated = await generateAudio(PREVIEW_SCRIPT, voice);
+      await uploadAudioAtPath(previewPath, generated);
+      audioBuffer = generated;
+    } catch (error) {
+      console.error(`Failed to generate TTS preview for ${voice}:`, error);
+      res.status(500).json({ error: "Failed to generate TTS preview." });
+      return;
+    }
   }
 
   res.setHeader("Content-Type", contentType);

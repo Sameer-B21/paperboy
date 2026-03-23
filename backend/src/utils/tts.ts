@@ -1,13 +1,13 @@
 const allowedVoices = new Set([
-  "alloy",
-  "ash",
-  "coral",
-  "echo",
-  "fable",
-  "onyx",
-  "nova",
-  "sage",
-  "shimmer",
+  "rachel",
+  "drew",
+  "clyde",
+  "paul",
+  "domi",
+  "fin",
+  "sarah",
+  "antoni",
+  "thomas",
 ]);
 
 export function normalizeTtsVoice(voice: unknown): string | undefined {

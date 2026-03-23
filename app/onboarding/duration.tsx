@@ -8,7 +8,7 @@ import { updateUserPreferences } from '@/data/backend';
 import { setOnboardingStep, setPodcastDurationMinutes } from '@/data/session';
 import { usePalette } from '@/hooks/use-palette';
 
-const MIN_MINUTES = 5;
+const MIN_MINUTES = 2;
 const MAX_MINUTES = 30;
 
 export default function DurationScreen() {

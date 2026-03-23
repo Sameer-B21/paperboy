@@ -8,7 +8,7 @@ import {
 import { listNewsletters } from "../../db/queries/newsletters.sql.js";
 import { getUserById, listUsers } from "../../db/queries/users.sql.js";
 import { uploadAudio } from "../../services/storage/uploadAudio.js";
-import { buildDailyDigestScript } from "../../services/summarize/chatgptDigest.js";
+import { buildDailyDigestScript } from "../../services/summarize/geminiDigest.js";
 import { generateAudio } from "../../services/tts/generateAudio.js";
 import { getAudioDurationSeconds } from "../../utils/audio.js";
 import { logger } from "../../utils/logger.js";
@@ -29,7 +29,7 @@ export async function runDailyDigestForUser(
   now = new Date(),
   options: { force?: boolean; voice?: string } = {}
 ): Promise<string | null> {
-  const resolvedVoice = options.voice?.trim() || env.OPENAI_TTS_VOICE || "alloy";
+  const resolvedVoice = options.voice?.trim() || "rachel";
   // Determine time window (daily schedule uses calendar day, manual uses last 24 hours)
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);

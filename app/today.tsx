@@ -30,15 +30,15 @@ import { useRequireUser } from '@/hooks/use-require-user';
 
 const brandName = 'Paperboy';
 const voiceLabelByValue: Record<string, string> = {
-  alloy: 'Alloy',
-  nova: 'Nova',
-  echo: 'Echo',
-  fable: 'Fable',
-  onyx: 'Onyx',
-  shimmer: 'Shimmer',
-  ash: 'Ash',
-  sage: 'Sage',
-  coral: 'Coral',
+  rachel: 'Rachel',
+  drew: 'Drew',
+  clyde: 'Clyde',
+  paul: 'Paul',
+  domi: 'Domi',
+  fin: 'Fin',
+  sarah: 'Sarah',
+  antoni: 'Antoni',
+  thomas: 'Thomas',
 };
 
 export default function TodayScreen() {
@@ -63,7 +63,7 @@ export default function TodayScreen() {
   const [isDurationReady, setIsDurationReady] = useState(false);
   const [hasFinished, setHasFinished] = useState(false);
   const [isScriptVisible, setIsScriptVisible] = useState(false);
-  const [episodeVoice, setEpisodeVoice] = useState<string>('alloy');
+  const [episodeVoice, setEpisodeVoice] = useState<string>('rachel');
   const [loadingEllipsis, setLoadingEllipsis] = useState<string>('');
   const seekInFlightRef = useRef(false);
   const hasFinishedRef = useRef(false);
@@ -170,7 +170,7 @@ export default function TodayScreen() {
   };
 
   const voiceLabel = useMemo(() => {
-    return voiceLabelByValue[episodeVoice] ?? 'Alloy';
+    return voiceLabelByValue[episodeVoice] ?? 'Rachel';
   }, [episodeVoice]);
 
   const loadDailyEpisode = async (forceGenerate = false): Promise<string | null> => {
@@ -182,7 +182,7 @@ export default function TodayScreen() {
 
     try {
       const storedVoice = await getTtsVoice();
-      const resolvedVoice = storedVoice ?? 'alloy';
+      const resolvedVoice = storedVoice ?? 'rachel';
       const now = new Date();
       const dayStart = new Date(now);
       dayStart.setHours(7, 0, 0, 0);
