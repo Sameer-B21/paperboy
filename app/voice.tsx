@@ -11,22 +11,22 @@ import { getTtsVoice, setTtsVoice } from '@/data/session';
 import { usePalette } from '@/hooks/use-palette';
 
 const voiceOptions = [
-  { value: 'rachel', label: 'Rachel', description: 'Calm and conversational.' },
-  { value: 'drew', label: 'Drew', description: 'Newsy and professional.' },
-  { value: 'clyde', label: 'Clyde', description: 'Deep and resonant.' },
-  { value: 'paul', label: 'Paul', description: 'Warm and friendly.' },
-  { value: 'domi', label: 'Domi', description: 'Energetic and upbeat.' },
-  { value: 'fin', label: 'Fin', description: 'Clear and measured.' },
-  { value: 'sarah', label: 'Sarah', description: 'Soft and articulate.' },
-  { value: 'antoni', label: 'Antoni', description: 'Well-rounded and smooth.' },
-  { value: 'thomas', label: 'Thomas', description: 'Relaxed and steady.' },
+  { value: 'alloy', label: 'Alloy', description: 'Balanced and clear.' },
+  { value: 'nova', label: 'Nova', description: 'Bright and lively.' },
+  { value: 'echo', label: 'Echo', description: 'Smooth and steady.' },
+  { value: 'fable', label: 'Fable', description: 'Warm and story-like.' },
+  { value: 'onyx', label: 'Onyx', description: 'Deep and grounded.' },
+  { value: 'shimmer', label: 'Shimmer', description: 'Soft and airy.' },
+  { value: 'ash', label: 'Ash', description: 'Crisp and neutral.' },
+  { value: 'sage', label: 'Sage', description: 'Calm and measured.' },
+  { value: 'coral', label: 'Coral', description: 'Friendly and upbeat.' },
 ];
 
 export default function VoiceSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const palette = usePalette();
-  const [voice, setVoice] = useState('rachel');
+  const [voice, setVoice] = useState('alloy');
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewVoice, setPreviewVoice] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
