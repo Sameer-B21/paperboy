@@ -25,6 +25,7 @@ import {
 } from '@/data/audioPlayer';
 import { generateDailyEpisode, getLatestDailyEpisode } from '@/data/backend';
 import { getTtsVoice } from '@/data/session';
+import { LiveActivity } from '@/data/liveActivity';
 import { usePalette } from '@/hooks/use-palette';
 import { useRequireUser } from '@/hooks/use-require-user';
 
@@ -70,6 +71,7 @@ export default function TodayScreen() {
   const replayGuardRef = useRef(false);
   const hasForcedGenerationRef = useRef(false);
   const playInFlightRef = useRef(false);
+  const liveActivityRef = useRef<string | null>(null);
 
 
   const isBusy = playbackStatus === 'ingesting' || playbackStatus === 'generating' || playbackStatus === 'polling';
@@ -140,6 +142,7 @@ export default function TodayScreen() {
       if (status.isPlaying) {
         setHasFinished(false);
         await sound.pauseAsync();
+        void LiveActivity.update({ status: 'Paused', isPlaying: false });
         return;
       }
       const duration = playbackDuration ?? 0;
@@ -162,6 +165,18 @@ export default function TodayScreen() {
       }
       await sound.playAsync();
       setIsPlaying(true);
+
+      // Start a Live Activity for playback if there isn't one
+      if (!liveActivityRef.current) {
+        const id = await LiveActivity.start({
+          title: episodeTitle,
+          status: 'Playing...',
+          progress: playbackDuration > 0 ? playbackPosition / playbackDuration : 0,
+        });
+        liveActivityRef.current = id;
+      } else {
+        void LiveActivity.update({ status: 'Playing...', isPlaying: true });
+      }
     } catch (error) {
       setPlaybackError(error instanceof Error ? error.message : 'Unable to play audio.');
     } finally {
@@ -179,6 +194,14 @@ export default function TodayScreen() {
     setIsInitialLoading(true);
     setIsDurationReady(false);
     setLoadingMessage("Checking today's brief...");
+
+    // Start Live Activity on Lock Screen / Dynamic Island
+    const activityId = await LiveActivity.start({
+      title: 'Your Morning Brief',
+      status: 'Syncing your inbox...',
+      progress: 0.1,
+    });
+    liveActivityRef.current = activityId;
 
     try {
       const storedVoice = await getTtsVoice();
@@ -209,11 +232,15 @@ export default function TodayScreen() {
         setIsDurationReady(digest.audioUrl ? durationMillis > 0 : true);
         setHasFinished(false);
         setPlaybackStatus('ready');
+        // End Live Activity — existing episode is already ready
+        void LiveActivity.end({ status: 'Your briefing is ready!' });
+        liveActivityRef.current = null;
         return digest.audioUrl;
       }
 
       setPlaybackStatus('generating');
       setLoadingMessage("Generating today's brief");
+      void LiveActivity.update({ status: 'Building your daily script...', progress: 0.4 });
       const generated = await generateDailyEpisode(resolvedVoice);
       if (!generated) {
         setPlaybackStatus('idle');
@@ -238,11 +265,14 @@ export default function TodayScreen() {
       setIsDurationReady(generated.audioUrl ? durationMillis > 0 : true);
       setHasFinished(false);
       setPlaybackStatus('ready');
+      void LiveActivity.update({ status: 'Your briefing is ready!', progress: 1.0 });
       return generated.audioUrl;
     } catch (error) {
       setPlaybackStatus('error');
       setErrorMessage(error instanceof Error ? error.message : 'Something went wrong.');
       setIsDurationReady(true);
+      void LiveActivity.end({ status: 'Error occurred' });
+      liveActivityRef.current = null;
       return null;
     } finally {
       setIsInitialLoading(false);
@@ -295,6 +325,16 @@ export default function TodayScreen() {
     if (nextDuration > 0) {
       if (status.isPlaying && status.positionMillis < nextDuration) {
         setHasFinished(false);
+
+        // Update Live Activity with playback progress (throttled per callback interval)
+        if (liveActivityRef.current) {
+          const pct = status.positionMillis / nextDuration;
+          void LiveActivity.update({
+            status: 'Playing...',
+            progress: pct,
+            isPlaying: true,
+          });
+        }
       }
       const ended =
       !replayGuardRef.current &&
@@ -311,6 +351,10 @@ export default function TodayScreen() {
 
         // show the UI as "at the end" (full bar + duration time)
         setPlaybackPosition(nextDuration);
+
+        // End Live Activity when playback finishes
+        void LiveActivity.end({ status: 'Playback complete' });
+        liveActivityRef.current = null;
 
         return;
       }
