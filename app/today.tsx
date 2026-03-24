@@ -232,9 +232,8 @@ export default function TodayScreen() {
         setIsDurationReady(digest.audioUrl ? durationMillis > 0 : true);
         setHasFinished(false);
         setPlaybackStatus('ready');
-        // End Live Activity — existing episode is already ready
-        void LiveActivity.end({ status: 'Your briefing is ready!' });
-        liveActivityRef.current = null;
+        // Keep Live Activity showing — episode is ready for playback
+        void LiveActivity.update({ status: 'Your briefing is ready!', progress: 1.0, isPlaying: false });
         return digest.audioUrl;
       }
 
@@ -279,7 +278,7 @@ export default function TodayScreen() {
     }
   };
 
-  const params = useLocalSearchParams<{ generate?: string }>();
+  const params = useLocalSearchParams<{ generate?: string; action?: string }>();
   const shouldForceGenerate = params.generate === '1' || params.generate === 'true';
 
   useEffect(() => {
@@ -293,6 +292,15 @@ export default function TodayScreen() {
     }
     void loadDailyEpisode(false);
   }, [shouldForceGenerate, hasUser]);
+
+  // ── Handle Live Activity play/pause button via search param ──
+  useEffect(() => {
+    if (params.action === 'toggle-playback') {
+      handlePlayPress();
+      // Clear the param so it doesn't re-fire on re-render
+      router.setParams({ action: undefined as any });
+    }
+  }, [params.action]);
 
   const handlePlaybackStatus = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) {

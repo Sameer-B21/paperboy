@@ -5,9 +5,9 @@
  * `npx expo prebuild`. This plugin:
  *
  *   1. Adds NSSupportsLiveActivities = YES to Info.plist
- *   2. Creates a PaperboyWidgets Widget Extension target in the Xcode project
- *   3. Copies Swift source files from ios-native/ into the generated ios/ dir
- *   4. Links the ActivityKit and WidgetKit frameworks
+ *   2. Copies Swift source files from ios-native/ into the generated ios/ dir
+ *   3. Adds the native module files to the main app target
+ *   4. Creates a PaperboyWidgets Widget Extension target in the Xcode project
  *   5. Sets deployment target to iOS 16.1 for the extension
  */
 
@@ -23,16 +23,6 @@ const path = require("path");
 
 function quoted(str) {
   return `"${str}"`;
-}
-
-function generateUUID() {
-  // Generate a 24-character hex string for Xcode PBX UUIDs
-  const hex = "0123456789ABCDEF";
-  let result = "";
-  for (let i = 0; i < 24; i++) {
-    result += hex[Math.floor(Math.random() * 16)];
-  }
-  return result;
 }
 
 // ─── Step 1: Info.plist ───────────────────────────────────
@@ -52,7 +42,7 @@ function withLiveActivityFiles(config) {
     async (cfg) => {
       const projectRoot = cfg.modRequest.projectRoot;
       const iosDir = path.join(projectRoot, "ios");
-      const appName = cfg.modRequest.projectName; // e.g. "NewsletterPodcaster"
+      const appName = cfg.modRequest.projectName;
 
       // --- Copy Widget Extension Swift files ---
       const widgetSrcDir = path.join(
@@ -71,8 +61,42 @@ function withLiveActivityFiles(config) {
         );
       }
 
+      // --- Create Info.plist for the Widget Extension target ---
+      const widgetInfoPlist = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleDisplayName</key>
+    <string>Paperboy Widgets</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(MARKETING_VERSION)</string>
+    <key>CFBundleVersion</key>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionPointIdentifier</key>
+        <string>com.apple.widgetkit-extension</string>
+    </dict>
+</dict>
+</plist>`;
+      fs.writeFileSync(
+        path.join(widgetDestDir, "PaperboyWidgets-Info.plist"),
+        widgetInfoPlist
+      );
+
       // --- Copy the ActivityAttributes into the main app target too ---
-      // (The main app needs access to the type to start/update activities)
       const mainAppDir = path.join(iosDir, appName);
       fs.copyFileSync(
         path.join(widgetSrcDir, "PaperboyActivityAttributes.swift"),
@@ -106,50 +130,47 @@ function withLiveActivityXcodeProject(config) {
     const widgetBundleId = `${bundleId}.PaperboyWidgets`;
     const widgetTargetName = "PaperboyWidgets";
 
-    // --- Add widget Swift files as file references in PBXFileReference ---
-    const widgetSwiftFiles = [
-      "PaperboyWidgetBundle.swift",
-      "PaperboyActivityAttributes.swift",
-      "PaperboyLiveActivity.swift",
-    ];
+    // ── Add native module files to main app target ──
 
-    // --- Add native module files to main app target ---
     const nativeModuleFiles = [
-      "PaperboyActivityAttributes.swift",
-      "LiveActivityModule.swift",
-      "LiveActivityModule.m",
+      { name: "PaperboyActivityAttributes.swift", type: "sourcecode.swift" },
+      { name: "LiveActivityModule.swift", type: "sourcecode.swift" },
+      { name: "LiveActivityModule.m", type: "sourcecode.c.objc" },
     ];
 
-    // Add native module files to the main app group and build phase
-    const mainAppGroup = proj.findPBXGroupKey({ name: appName }) ||
+    // Find the main app group
+    const mainGroupKey =
+      proj.findPBXGroupKey({ name: appName }) ||
       proj.findPBXGroupKey({ path: appName });
 
-    if (mainAppGroup) {
-      for (const fileName of nativeModuleFiles) {
-        const filePath = `${appName}/${fileName}`;
-
-        // Add file reference
-        const fileRef = proj.addFile(filePath, mainAppGroup, {
-          lastKnownFileType: fileName.endsWith(".m")
-            ? "sourcecode.c.objc"
-            : "sourcecode.swift",
-          sourceTree: '"<group>"',
-        });
-
-        // Add to Sources build phase of main app target
-        if (fileRef) {
-          const mainTarget = proj.getFirstTarget();
-          if (mainTarget) {
-            proj.addToPbxBuildFileSection(fileRef);
-            proj.addToPbxSourcesBuildPhase(fileRef);
-          }
-        }
+    if (mainGroupKey) {
+      for (const file of nativeModuleFiles) {
+        proj.addSourceFile(
+          `${appName}/${file.name}`,
+          { target: proj.getFirstTarget().uuid },
+          mainGroupKey
+        );
       }
     }
 
-    // --- Create Widget Extension target ---
+    // ── Create the Widget Extension target ──
 
-    // Use the xcode module's addTarget method to create the extension target
+    // 1. Create a PBXGroup for the widget files
+    const widgetGroupKey = proj.pbxCreateGroup(widgetTargetName, widgetTargetName);
+
+    // Add widget group to the main (root) project group
+    const rootGroupKey = proj.getFirstProject().firstProject.mainGroup;
+    if (rootGroupKey) {
+      const rootGroup = proj.getPBXGroupByKey(rootGroupKey);
+      if (rootGroup && rootGroup.children) {
+        rootGroup.children.push({
+          value: widgetGroupKey,
+          comment: widgetTargetName,
+        });
+      }
+    }
+
+    // 2. Create the extension target
     const extTarget = proj.addTarget(
       widgetTargetName,
       "app_extension",
@@ -157,88 +178,111 @@ function withLiveActivityXcodeProject(config) {
       widgetBundleId
     );
 
-    if (extTarget) {
-      // Add each widget Swift file to the extension group and build phase
-      const extGroupKey = proj.findPBXGroupKey({ name: widgetTargetName });
+    if (!extTarget) {
+      console.warn("[withLiveActivity] Failed to create extension target");
+      return cfg;
+    }
 
-      for (const fileName of widgetSwiftFiles) {
-        const filePath = `${widgetTargetName}/${fileName}`;
-        const fileRef = proj.addFile(filePath, extGroupKey, {
-          lastKnownFileType: "sourcecode.swift",
-          sourceTree: '"<group>"',
+    // 3. Add a Sources build phase for the extension target
+    const sourcesBuildPhase = proj.addBuildPhase(
+      [],
+      "PBXSourcesBuildPhase",
+      "Sources",
+      extTarget.uuid
+    );
+
+    // 4. Add a Frameworks build phase for the extension target
+    proj.addBuildPhase(
+      [],
+      "PBXFrameworksBuildPhase",
+      "Frameworks",
+      extTarget.uuid
+    );
+
+    // 5. Add a Resources build phase for the extension target
+    proj.addBuildPhase(
+      [],
+      "PBXResourcesBuildPhase",
+      "Resources",
+      extTarget.uuid
+    );
+
+    // 6. Add widget Swift files to the extension
+    const widgetSwiftFiles = [
+      "PaperboyWidgetBundle.swift",
+      "PaperboyActivityAttributes.swift",
+      "PaperboyLiveActivity.swift",
+    ];
+
+    for (const fileName of widgetSwiftFiles) {
+      proj.addSourceFile(
+        fileName,
+        { target: extTarget.uuid },
+        widgetGroupKey
+      );
+    }
+
+    // 7. Add WidgetKit and SwiftUI frameworks to the extension
+    proj.addFramework("WidgetKit.framework", {
+      target: extTarget.uuid,
+      link: true,
+    });
+    proj.addFramework("SwiftUI.framework", {
+      target: extTarget.uuid,
+      link: true,
+    });
+
+    // ── Configure build settings ──
+
+    const configurations = proj.pbxXCBuildConfigurationSection();
+    for (const key in configurations) {
+      const buildConfig = configurations[key];
+      if (
+        typeof buildConfig !== "object" ||
+        !buildConfig.buildSettings ||
+        !buildConfig.name
+      ) {
+        continue;
+      }
+
+      const productName = buildConfig.buildSettings.PRODUCT_NAME;
+
+      // Widget extension build settings
+      if (
+        productName === quoted(widgetTargetName) ||
+        productName === widgetTargetName
+      ) {
+        Object.assign(buildConfig.buildSettings, {
+          IPHONEOS_DEPLOYMENT_TARGET: "16.2",
+          SWIFT_VERSION: "5.0",
+          CODE_SIGN_STYLE: "Automatic",
+          GENERATE_INFOPLIST_FILE: "YES",
+          CURRENT_PROJECT_VERSION: "1",
+          MARKETING_VERSION: "1.0",
+          PRODUCT_BUNDLE_IDENTIFIER: quoted(widgetBundleId),
+          TARGETED_DEVICE_FAMILY: quoted("1,2"),
+          INFOPLIST_KEY_CFBundleDisplayName: quoted("Paperboy Widgets"),
+          INFOPLIST_KEY_NSHumanReadableCopyright: quoted(""),
+          LD_RUNPATH_SEARCH_PATHS: quoted(
+            "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
+          ),
+          SKIP_INSTALL: "YES",
         });
-        if (fileRef && extTarget.uuid) {
-          proj.addToPbxBuildFileSection(fileRef);
-          const sources = proj.addBuildPhase(
-            [],
-            "PBXSourcesBuildPhase",
-            "Sources",
-            extTarget.uuid
-          );
-          if (sources) {
-            proj.addToPbxBuildFileSection(fileRef);
-          }
-        }
       }
 
-      // --- Set build settings for the widget extension target ---
-      const configurations = proj.pbxXCBuildConfigurationSection();
-      for (const key in configurations) {
-        const config = configurations[key];
+      // Ensure main app deployment target is >= 16.1
+      if (
+        productName === quoted(appName) ||
+        productName === appName ||
+        buildConfig.buildSettings.PRODUCT_BUNDLE_IDENTIFIER === quoted(bundleId)
+      ) {
+        const currentTarget =
+          buildConfig.buildSettings.IPHONEOS_DEPLOYMENT_TARGET;
         if (
-          typeof config === "object" &&
-          config.buildSettings &&
-          config.name
+          !currentTarget ||
+          parseFloat(String(currentTarget).replace(/"/g, "")) < 16.2
         ) {
-          // Find configs belonging to the widget target
-          // We identify them by checking if the PRODUCT_NAME matches
-          if (
-            config.buildSettings.PRODUCT_NAME === quoted(widgetTargetName) ||
-            config.buildSettings.PRODUCT_NAME === widgetTargetName
-          ) {
-            config.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = "16.1";
-            config.buildSettings.SWIFT_VERSION = "5.0";
-            config.buildSettings.CODE_SIGN_STYLE = "Automatic";
-            config.buildSettings.INFOPLIST_KEY_CFBundleDisplayName =
-              quoted("Paperboy Widgets");
-            config.buildSettings.INFOPLIST_KEY_NSHumanReadableCopyright =
-              quoted("");
-            config.buildSettings.GENERATE_INFOPLIST_FILE = "YES";
-            config.buildSettings.CURRENT_PROJECT_VERSION = "1";
-            config.buildSettings.MARKETING_VERSION = "1.0";
-            config.buildSettings.PRODUCT_BUNDLE_IDENTIFIER =
-              quoted(widgetBundleId);
-            config.buildSettings.TARGETED_DEVICE_FAMILY =
-              quoted("1,2");
-            config.buildSettings.LD_RUNPATH_SEARCH_PATHS =
-              quoted(
-                "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
-              );
-            config.buildSettings.SKIP_INSTALL = "YES";
-          }
-        }
-      }
-
-      // --- Also update main app build settings ---
-      for (const key in configurations) {
-        const config = configurations[key];
-        if (
-          typeof config === "object" &&
-          config.buildSettings &&
-          config.name
-        ) {
-          if (
-            config.buildSettings.PRODUCT_NAME === quoted(appName) ||
-            config.buildSettings.PRODUCT_NAME === appName ||
-            config.buildSettings.PRODUCT_BUNDLE_IDENTIFIER === quoted(bundleId)
-          ) {
-            // Ensure main app deployment target supports Live Activities
-            const currentTarget =
-              config.buildSettings.IPHONEOS_DEPLOYMENT_TARGET;
-            if (!currentTarget || parseFloat(currentTarget) < 16.1) {
-              config.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = "16.1";
-            }
-          }
+          buildConfig.buildSettings.IPHONEOS_DEPLOYMENT_TARGET = "16.2";
         }
       }
     }

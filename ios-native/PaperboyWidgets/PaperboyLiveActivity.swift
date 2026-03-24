@@ -3,6 +3,8 @@ import SwiftUI
 import WidgetKit
 
 struct PaperboyLiveActivity: Widget {
+    private static let toggleURL = URL(string: "newsletterpodcaster:///today?action=toggle-playback")!
+
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: PaperboyActivityAttributes.self) { context in
             // ── Lock Screen / StandBy banner ──
@@ -32,15 +34,25 @@ struct PaperboyLiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    ProgressView(value: context.state.progress)
-                        .tint(.blue)
-                        .padding(.horizontal, 4)
+                    VStack(spacing: 8) {
+                        ProgressView(value: context.state.progress)
+                            .tint(.blue)
+                            .padding(.horizontal, 4)
+                        // Play/Pause button
+                        Link(destination: Self.toggleURL) {
+                            Image(systemName: context.state.isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 32))
+                                .foregroundColor(.blue)
+                        }
+                    }
                 }
             } compactLeading: {
                 // ── Compact Leading ──
-                Image(systemName: context.state.isPlaying ? "play.fill" : "newspaper.fill")
-                    .foregroundColor(.blue)
-                    .font(.callout)
+                Link(destination: Self.toggleURL) {
+                    Image(systemName: context.state.isPlaying ? "pause.fill" : "play.fill")
+                        .foregroundColor(.blue)
+                        .font(.callout)
+                }
             } compactTrailing: {
                 // ── Compact Trailing ──
                 Text("\(Int(context.state.progress * 100))%")
@@ -48,7 +60,7 @@ struct PaperboyLiveActivity: Widget {
                     .foregroundColor(.secondary)
             } minimal: {
                 // ── Minimal (when another app also has a Live Activity) ──
-                Image(systemName: "newspaper.fill")
+                Image(systemName: context.state.isPlaying ? "pause.fill" : "play.fill")
                     .foregroundColor(.blue)
                     .font(.caption2)
             }
@@ -65,7 +77,7 @@ struct PaperboyLiveActivity: Widget {
                 Circle()
                     .fill(Color.blue.opacity(0.15))
                     .frame(width: 44, height: 44)
-                Image(systemName: context.state.isPlaying ? "play.fill" : "newspaper.fill")
+                Image(systemName: "newspaper.fill")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.blue)
             }
@@ -85,10 +97,17 @@ struct PaperboyLiveActivity: Widget {
 
             Spacer(minLength: 0)
 
-            // Percentage badge
-            Text("\(Int(context.state.progress * 100))%")
-                .font(.title3.monospacedDigit().bold())
-                .foregroundColor(.blue)
+            // Play/Pause button
+            Link(destination: Self.toggleURL) {
+                ZStack {
+                    Circle()
+                        .fill(Color.blue)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: context.state.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
         }
         .padding(16)
         .activityBackgroundTint(.black.opacity(0.75))

@@ -23,7 +23,7 @@ class LiveActivityModule: NSObject {
         resolver resolve: @escaping RCTPromiseResolveBlock,
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        if #available(iOS 16.1, *) {
+        if #available(iOS 16.2, *) {
             guard ActivityAuthorizationInfo().areActivitiesEnabled else {
                 reject("LIVE_ACTIVITY_DISABLED", "Live Activities are disabled in Settings.", nil)
                 return
@@ -62,7 +62,7 @@ class LiveActivityModule: NSObject {
         resolver resolve: @escaping RCTPromiseResolveBlock,
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        if #available(iOS 16.1, *) {
+        if #available(iOS 16.2, *) {
             guard let activity = currentActivity as? Activity<PaperboyActivityAttributes> else {
                 reject("LIVE_ACTIVITY_NOT_FOUND", "No active Live Activity to update.", nil)
                 return
@@ -93,7 +93,7 @@ class LiveActivityModule: NSObject {
         resolver resolve: @escaping RCTPromiseResolveBlock,
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
-        if #available(iOS 16.1, *) {
+        if #available(iOS 16.2, *) {
             guard let activity = currentActivity as? Activity<PaperboyActivityAttributes> else {
                 reject("LIVE_ACTIVITY_NOT_FOUND", "No active Live Activity to end.", nil)
                 return
