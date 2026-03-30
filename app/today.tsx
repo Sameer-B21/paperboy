@@ -31,9 +31,9 @@ import { useRequireUser } from '@/hooks/use-require-user';
 
 const brandName = 'Paperboy';
 const voiceLabelByValue: Record<string, string> = {
-  'en-US-Chirp3-HD-Leda': 'Chirp3 HD (Leda)',
-  'en-US-Chirp3-HD-Charon': 'Chirp3 HD (Charon)',
-  'en-US-Chirp3-HD-Kore': 'Chirp3 HD (Kore)',
+  'en-US-Chirp3-HD-Leda': 'Leda',
+  'en-US-Chirp3-HD-Charon': 'Charon',
+  'en-US-Chirp3-HD-Kore': 'Kore',
   'en-US-Journey-F': 'Journey (Female)',
   'en-US-Journey-D': 'Journey (Male)',
   'en-US-Chirp-HD-F': 'Chirp HD (Female)',
@@ -331,7 +331,10 @@ export default function TodayScreen() {
     if (params.action === 'toggle-playback') {
       handlePlayPress();
       // Clear the param so it doesn't re-fire on re-render
-      router.setParams({ action: undefined as any });
+      // Deferred to avoid "Attempted to navigate before mounting" error
+      setTimeout(() => {
+        router.setParams({ action: undefined as any });
+      }, 100);
     }
   }, [params.action]);
 

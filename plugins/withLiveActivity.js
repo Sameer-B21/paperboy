@@ -55,10 +55,13 @@ function withLiveActivityFiles(config) {
 
       const widgetFiles = fs.readdirSync(widgetSrcDir);
       for (const file of widgetFiles) {
-        fs.copyFileSync(
-          path.join(widgetSrcDir, file),
-          path.join(widgetDestDir, file)
-        );
+        const srcPath = path.join(widgetSrcDir, file);
+        const destPath = path.join(widgetDestDir, file);
+        if (fs.statSync(srcPath).isDirectory()) {
+          fs.cpSync(srcPath, destPath, { recursive: true });
+        } else {
+          fs.copyFileSync(srcPath, destPath);
+        }
       }
 
       // --- Create Info.plist for the Widget Extension target ---
@@ -221,6 +224,16 @@ function withLiveActivityXcodeProject(config) {
         widgetGroupKey
       );
     }
+
+    // 6.5 Add Assets safely bypassing the node-xcode addResourceFile crash
+    const file = proj.addFile("Assets.xcassets", widgetGroupKey, {
+      lastKnownFileType: "folder.assetcatalog",
+      sourceTree: '"<group>"',
+    });
+    file.uuid = proj.generateUuid();
+    file.target = extTarget.uuid;
+    proj.addToPbxBuildFileSection(file);
+    proj.addToPbxResourcesBuildPhase(file);
 
     // 7. Add WidgetKit and SwiftUI frameworks to the extension
     proj.addFramework("WidgetKit.framework", {

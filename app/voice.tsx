@@ -11,9 +11,9 @@ import { getTtsVoice, setTtsVoice } from '@/data/session';
 import { usePalette } from '@/hooks/use-palette';
 
 const voiceOptions = [
-  { value: 'en-US-Chirp3-HD-Leda', label: 'Chirp3 HD (Leda)', description: 'Expressive and realistic high-definition female voice.' },
-  { value: 'en-US-Chirp3-HD-Charon', label: 'Chirp3 HD (Charon)', description: 'Expressive and realistic high-definition male voice.' },
-  { value: 'en-US-Chirp3-HD-Kore', label: 'Chirp3 HD (Kore)', description: 'Alternative high-definition female voice.' },
+  { value: 'en-US-Chirp3-HD-Leda', label: 'Leda', description: 'Expressive and realistic high-definition female voice.' },
+  { value: 'en-US-Chirp3-HD-Charon', label: 'Charon', description: 'Expressive and realistic high-definition male voice.' },
+  { value: 'en-US-Chirp3-HD-Kore', label: 'Kore', description: 'Alternative high-definition female voice.' },
   { value: 'en-US-Journey-F', label: 'Journey (Female)', description: 'Conversational and warm female voice.' },
   { value: 'en-US-Journey-D', label: 'Journey (Male)', description: 'Conversational and friendly male voice.' },
 ];

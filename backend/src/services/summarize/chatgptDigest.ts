@@ -159,11 +159,13 @@ export async function buildDailyDigestScript(payload: {
 
             `Structure:
             1–2 sentence opening overview. Greet the listener by name ("Good morning, ${payload.userName ?? 'there'}" or similar).
-            Segments introduced with: \“Moving on to {Newsletter Name}…\”
-            End with “One Thing to Remember Today” and a short reflection`+
+            Segments introduced with: "Moving on to {Newsletter Name}…"
+            End with "One Thing to Remember Today" and a short reflection`+
 
-            `Length: ${payload.durationMinutes ?? 8} minutes. ` +
-            `Return JSON with keys "summary" (2-4 sentences) and "script" (a ${payload.durationMinutes ?? 8}-minute read). ` +
+            `Length Constraints (CRITICAL): Check your internal word count carefully. The target duration is exactly ${payload.durationMinutes ?? 8} minutes (~150 words per minute, so aim for ${(payload.durationMinutes ?? 8) * 150} words). ` +
+            `If the provided newsletters are too short, you MUST creatively expand on the analysis and implications of the news to reach this length. If they are too long, limit yourself strictly to the word count by aggressively summarizing. ` +
+
+            `Return a JSON object with two keys: "summary" (2-4 sentences) and "script" (the full podcast script meeting the length constraints). ` +
             `Newsletters:\n\n` + 
             input,
         },

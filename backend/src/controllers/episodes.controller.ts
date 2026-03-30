@@ -5,7 +5,9 @@ import {
   getLatestDailyDigest,
   listEpisodes as listEpisodesByUser,
 } from "../db/queries/episodes.sql.js";
+import { listNewsletters } from "../db/queries/newsletters.sql.js";
 import { runDailyDigestForUser } from "../jobs/workers/dailyDigest.worker.js";
+import { ingestNewsletterForUser } from "../services/gmail/gmailSync.js";
 import { downloadAudio } from "../services/storage/uploadAudio.js";
 import { AppError } from "../utils/errors.js";
 import { normalizeTtsVoice } from "../utils/tts.js";
@@ -94,6 +96,15 @@ export async function generateDailyEpisode(req: Request, res: Response) {
   const userId = readUserId(req);
   const requestedVoice = normalizeTtsVoice(req.body?.voice);
   const now = new Date();
+
+  // Force latest sync: Fetch active newsletters and ingest them synchronously
+  // This ensures the database has the latest inbound emails before generating!
+  const newsletters = await listNewsletters(userId);
+  const activeNewsletters = newsletters.filter((n) => n.selected);
+  await Promise.all(
+    activeNewsletters.map((sub) => ingestNewsletterForUser(userId, sub.sender))
+  );
+
   const episodeId = await runDailyDigestForUser(userId, now, {
     force: true,
     voice: requestedVoice,

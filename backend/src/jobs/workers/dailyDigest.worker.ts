@@ -50,13 +50,19 @@ export async function runDailyDigestForUser(
   }
 
   // Fetch episodes for the day
-  const episodes = options.force
+  let episodes = options.force
     ? await listEpisodesSince(userId, windowStart.toISOString())
     : await listEpisodesForDay(
         userId,
         startOfDay.toISOString(),
         endOfDay.toISOString()
       );
+
+  // Filter out episodes from newsletters that the user has since disabled
+  const newsletters = await listNewsletters(userId);
+  const activeNewsletterIds = new Set(newsletters.filter((n) => n.selected).map((n) => n.id));
+  episodes = episodes.filter((ep) => ep.newsletterId && activeNewsletterIds.has(ep.newsletterId));
+
   if (episodes.length === 0) {
     const digestEpisode =
       existing ??
@@ -83,8 +89,7 @@ export async function runDailyDigestForUser(
   }
   // console.log("Found episodes for digest", { userId, dayKey, count: episodes.length });
 
-  // Fetch newsletters and map by ID
-  const newsletters = await listNewsletters(userId);
+  // Map active newsletters
   const newsletterMap = new Map(newsletters.map((newsletter) => [newsletter.id, newsletter]));
 
   // Group episodes by newsletter

@@ -29,9 +29,9 @@ import { usePalette } from '@/hooks/use-palette';
 import { useRequireUser } from '@/hooks/use-require-user';
 
 const voiceLabelByValue: Record<string, string> = {
-  'en-US-Chirp3-HD-Leda': 'Chirp3 HD (Leda)',
-  'en-US-Chirp3-HD-Charon': 'Chirp3 HD (Charon)',
-  'en-US-Chirp3-HD-Kore': 'Chirp3 HD (Kore)',
+  'en-US-Chirp3-HD-Leda': 'Leda',
+  'en-US-Chirp3-HD-Charon': 'Charon',
+  'en-US-Chirp3-HD-Kore': 'Kore',
   'en-US-Journey-F': 'Journey (Female)',
   'en-US-Journey-D': 'Journey (Male)',
   'en-US-Chirp-HD-F': 'Chirp HD (Female)',
