@@ -7,7 +7,7 @@ const PREVIEW_SCRIPT = "This is the Paperboy voice preview for your daily brief.
 const previewPathForVoice = (voice: string) => `tts-previews/${voice}.mp3`;
 
 export async function previewTts(req: Request, res: Response) {
-  const voice = normalizeTtsVoice(req.query.voice) ?? "alloy";
+  const voice = normalizeTtsVoice(req.query.voice) ?? "en-US-Chirp3-HD-Leda";
   const previewPath = previewPathForVoice(voice);
   let audioBuffer: Buffer;
   let contentType = "audio/mpeg";

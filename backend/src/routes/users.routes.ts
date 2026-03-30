@@ -1,7 +1,8 @@
 import { Router } from "express";
 
-import { updateUserPreferences } from "../controllers/users.controller.js";
+import { getCurrentUser, updateUserPreferences } from "../controllers/users.controller.js";
 
 export const usersRouter = Router();
 
+usersRouter.get("/me", getCurrentUser);
 usersRouter.patch("/me", updateUserPreferences);

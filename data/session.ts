@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const USER_ID_KEY = 'newsletterpodcaster.userId';
 const USER_EMAIL_KEY = 'newsletterpodcaster.userEmail';
+const USER_NAME_KEY = 'newsletterpodcaster.userName';
 const TTS_VOICE_KEY = 'newsletterpodcaster.ttsVoice';
 const ONBOARDING_STEP_KEY = 'newsletterpodcaster.onboardingStep';
 const PODCAST_DURATION_KEY = 'newsletterpodcaster.podcastDurationMinutes';
@@ -26,8 +27,22 @@ export async function setUserEmail(email: string): Promise<void> {
   await AsyncStorage.setItem(USER_EMAIL_KEY, email);
 }
 
+
+
 export async function clearUserEmail(): Promise<void> {
   await AsyncStorage.removeItem(USER_EMAIL_KEY);
+}
+
+export async function getUserName(): Promise<string | null> {
+  return AsyncStorage.getItem(USER_NAME_KEY);
+}
+
+export async function setUserName(name: string): Promise<void> {
+  await AsyncStorage.setItem(USER_NAME_KEY, name);
+}
+
+export async function clearUserName(): Promise<void> {
+  await AsyncStorage.removeItem(USER_NAME_KEY);
 }
 
 export async function getTtsVoice(): Promise<string | null> {

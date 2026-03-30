@@ -108,6 +108,7 @@ export async function buildDailyDigestScript(payload: {
   dateLabel: string;
   items: DigestItem[];
   durationMinutes?: number;
+  userName?: string;
 }): Promise<{ summary: string; script: string }> {
   if (!env.OPENAI_API_KEY) {
     throw new Error("Missing OPENAI_API_KEY.");
@@ -157,13 +158,13 @@ export async function buildDailyDigestScript(payload: {
             Use a single-host, conversational voice, optimized for audio`+
 
             `Structure:
-            1–2 sentence opening overview
+            1–2 sentence opening overview. Greet the listener by name ("Good morning, ${payload.userName ?? 'there'}" or similar).
             Segments introduced with: \“Moving on to {Newsletter Name}…\”
             End with “One Thing to Remember Today” and a short reflection`+
 
             `Length: ${payload.durationMinutes ?? 8} minutes. ` +
             `Return JSON with keys "summary" (2-4 sentences) and "script" (a ${payload.durationMinutes ?? 8}-minute read). ` +
-            `Newsletters:`, 
+            `Newsletters:\n\n` + 
             input,
         },
       ],

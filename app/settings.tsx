@@ -28,6 +28,15 @@ import {
 import { usePalette } from '@/hooks/use-palette';
 import { useRequireUser } from '@/hooks/use-require-user';
 
+const voiceLabelByValue: Record<string, string> = {
+  'en-US-Chirp3-HD-Leda': 'Chirp3 HD (Leda)',
+  'en-US-Chirp3-HD-Charon': 'Chirp3 HD (Charon)',
+  'en-US-Chirp3-HD-Kore': 'Chirp3 HD (Kore)',
+  'en-US-Journey-F': 'Journey (Female)',
+  'en-US-Journey-D': 'Journey (Male)',
+  'en-US-Chirp-HD-F': 'Chirp HD (Female)',
+};
+
 export default function SettingsScreen() {
   const params = useLocalSearchParams<{ userId?: string; email?: string; connected?: string }>();
   const { userId, email, connected } = params;
@@ -37,7 +46,7 @@ export default function SettingsScreen() {
   useRequireUser({ allowUserId: userId });
 
   const [userEmail, setUserEmailState] = useState('');
-  const [ttsVoice, setTtsVoiceState] = useState('alloy');
+  const [ttsVoice, setTtsVoiceState] = useState('en-US-Chirp3-HD-Leda');
   const [durationMinutes, setDurationMinutes] = useState('8');
   const [activeNewsletterCount, setActiveNewsletterCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
@@ -88,7 +97,7 @@ export default function SettingsScreen() {
     router.replace('/onboarding/connect');
   };
 
-  const voiceLabel = ttsVoice.charAt(0).toUpperCase() + ttsVoice.slice(1);
+  const voiceLabel = voiceLabelByValue[ttsVoice] ?? 'Chirp3 HD (Leda)';
   const durationLabel = `${durationMinutes} min`;
   const sourcesLabel =
     activeNewsletterCount > 0

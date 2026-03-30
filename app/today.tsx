@@ -23,23 +23,20 @@ import {
   setPlaybackStatusHandler,
   stopPreviewSound,
 } from '@/data/audioPlayer';
-import { generateDailyEpisode, getLatestDailyEpisode } from '@/data/backend';
-import { getTtsVoice } from '@/data/session';
+import { generateDailyEpisode, getLatestDailyEpisode, fetchUserProfile } from '@/data/backend';
+import { getTtsVoice, getUserName, setUserName } from '@/data/session';
 import { LiveActivity } from '@/data/liveActivity';
 import { usePalette } from '@/hooks/use-palette';
 import { useRequireUser } from '@/hooks/use-require-user';
 
 const brandName = 'Paperboy';
 const voiceLabelByValue: Record<string, string> = {
-  alloy: 'Alloy',
-  nova: 'Nova',
-  echo: 'Echo',
-  fable: 'Fable',
-  onyx: 'Onyx',
-  shimmer: 'Shimmer',
-  ash: 'Ash',
-  sage: 'Sage',
-  coral: 'Coral',
+  'en-US-Chirp3-HD-Leda': 'Chirp3 HD (Leda)',
+  'en-US-Chirp3-HD-Charon': 'Chirp3 HD (Charon)',
+  'en-US-Chirp3-HD-Kore': 'Chirp3 HD (Kore)',
+  'en-US-Journey-F': 'Journey (Female)',
+  'en-US-Journey-D': 'Journey (Male)',
+  'en-US-Chirp-HD-F': 'Chirp HD (Female)',
 };
 
 export default function TodayScreen() {
@@ -64,7 +61,7 @@ export default function TodayScreen() {
   const [isDurationReady, setIsDurationReady] = useState(false);
   const [hasFinished, setHasFinished] = useState(false);
   const [isScriptVisible, setIsScriptVisible] = useState(false);
-  const [episodeVoice, setEpisodeVoice] = useState<string>('alloy');
+  const [episodeVoice, setEpisodeVoice] = useState<string>('en-US-Chirp3-HD-Leda');
   const [loadingEllipsis, setLoadingEllipsis] = useState<string>('');
   const seekInFlightRef = useRef(false);
   const hasFinishedRef = useRef(false);
@@ -72,6 +69,7 @@ export default function TodayScreen() {
   const hasForcedGenerationRef = useRef(false);
   const playInFlightRef = useRef(false);
   const liveActivityRef = useRef<string | null>(null);
+  const [appUserName, setAppUserName] = useState<string>('There');
 
 
   const isBusy = playbackStatus === 'ingesting' || playbackStatus === 'generating' || playbackStatus === 'polling';
@@ -142,7 +140,8 @@ export default function TodayScreen() {
       if (status.isPlaying) {
         setHasFinished(false);
         await sound.pauseAsync();
-        void LiveActivity.update({ status: 'Paused', isPlaying: false });
+        const durationMins = Math.ceil(playbackDuration / 60000);
+        void LiveActivity.update({ status: 'Paused', isPlaying: false, durationMinutes: durationMins });
         return;
       }
       const duration = playbackDuration ?? 0;
@@ -170,12 +169,18 @@ export default function TodayScreen() {
       if (!liveActivityRef.current) {
         const id = await LiveActivity.start({
           title: episodeTitle,
+          userName: appUserName,
           status: 'Playing...',
           progress: playbackDuration > 0 ? playbackPosition / playbackDuration : 0,
+          durationMinutes: Math.ceil(playbackDuration / 60000)
         });
         liveActivityRef.current = id;
       } else {
-        void LiveActivity.update({ status: 'Playing...', isPlaying: true });
+        void LiveActivity.update({ 
+          status: 'Playing...', 
+          isPlaying: true,
+          durationMinutes: Math.ceil(playbackDuration / 60000)
+        });
       }
     } catch (error) {
       setPlaybackError(error instanceof Error ? error.message : 'Unable to play audio.');
@@ -185,7 +190,7 @@ export default function TodayScreen() {
   };
 
   const voiceLabel = useMemo(() => {
-    return voiceLabelByValue[episodeVoice] ?? 'Alloy';
+    return voiceLabelByValue[episodeVoice] ?? 'Chirp3 HD (Leda)';
   }, [episodeVoice]);
 
   const loadDailyEpisode = async (forceGenerate = false): Promise<string | null> => {
@@ -195,9 +200,25 @@ export default function TodayScreen() {
     setIsDurationReady(false);
     setLoadingMessage("Checking today's brief...");
 
+    let currentUserName = await getUserName();
+    if (!currentUserName) {
+      try {
+        const profile = await fetchUserProfile();
+        if (profile.name) {
+          currentUserName = profile.name.split(' ')[0]; // use First Name
+          await setUserName(currentUserName);
+        }
+      } catch {
+        // Ignore profile load errors here
+      }
+    }
+    const resolvedUserName = currentUserName ?? 'There';
+    setAppUserName(resolvedUserName);
+
     // Start Live Activity on Lock Screen / Dynamic Island
     const activityId = await LiveActivity.start({
       title: 'Your Morning Brief',
+      userName: resolvedUserName,
       status: 'Syncing your inbox...',
       progress: 0.1,
     });
@@ -205,7 +226,7 @@ export default function TodayScreen() {
 
     try {
       const storedVoice = await getTtsVoice();
-      const resolvedVoice = storedVoice ?? 'alloy';
+      const resolvedVoice = storedVoice ?? 'en-US-Chirp3-HD-Leda';
       const now = new Date();
       const dayStart = new Date(now);
       dayStart.setHours(7, 0, 0, 0);
@@ -233,7 +254,13 @@ export default function TodayScreen() {
         setHasFinished(false);
         setPlaybackStatus('ready');
         // Keep Live Activity showing — episode is ready for playback
-        void LiveActivity.update({ status: 'Your briefing is ready!', progress: 1.0, isPlaying: false });
+        const durationMins = Math.ceil(durationMillis / 60000);
+        void LiveActivity.update({ 
+          status: 'Your briefing is ready!', 
+          progress: 1.0, 
+          isPlaying: false,
+          durationMinutes: durationMins
+        });
         return digest.audioUrl;
       }
 
@@ -264,7 +291,13 @@ export default function TodayScreen() {
       setIsDurationReady(generated.audioUrl ? durationMillis > 0 : true);
       setHasFinished(false);
       setPlaybackStatus('ready');
-      void LiveActivity.update({ status: 'Your briefing is ready!', progress: 1.0 });
+      const generatedDurationMins = Math.ceil(durationMillis / 60000);
+      void LiveActivity.update({ 
+        status: 'Your briefing is ready!', 
+        progress: 1.0,
+        isPlaying: false,
+        durationMinutes: generatedDurationMins
+      });
       return generated.audioUrl;
     } catch (error) {
       setPlaybackStatus('error');
@@ -341,6 +374,7 @@ export default function TodayScreen() {
             status: 'Playing...',
             progress: pct,
             isPlaying: true,
+            durationMinutes: Math.ceil(nextDuration / 60000)
           });
         }
       }
@@ -553,6 +587,7 @@ export default function TodayScreen() {
       height: 42,
       borderRadius: 12,
       resizeMode: 'contain',
+      tintColor: palette.primaryText,
     },
     brandText: {
       color: palette.primaryText,

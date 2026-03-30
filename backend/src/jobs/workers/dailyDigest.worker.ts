@@ -29,7 +29,7 @@ export async function runDailyDigestForUser(
   now = new Date(),
   options: { force?: boolean; voice?: string } = {}
 ): Promise<string | null> {
-  const resolvedVoice = options.voice?.trim() || env.OPENAI_TTS_VOICE || "alloy";
+  const resolvedVoice = options.voice?.trim() || env.OPENAI_TTS_VOICE || "en-US-Chirp3-HD-Leda";
   // Determine time window (daily schedule uses calendar day, manual uses last 24 hours)
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
@@ -163,7 +163,8 @@ export async function runDailyDigestForUser(
     // Build the daily digest script
     const user = await getUserById(userId);
     const durationMinutes = user?.podcastDurationMinutes ?? 8;
-    const { summary, script } = await buildDailyDigestScript({ dateLabel, items, durationMinutes });
+    const userName = user?.name ? user.name.split(' ')[0] : 'there';
+    const { summary, script } = await buildDailyDigestScript({ dateLabel, items, durationMinutes, userName });
     await updateEpisode(digestEpisode.id, { summary, script, voice: resolvedVoice });
 
     // Generate audio and upload

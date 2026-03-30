@@ -5,7 +5,7 @@ import { createGmailClient } from "./gmailClient.js";
 import { isNewsletterEmail } from "./gmailFilters.js";
 import { parseMessage } from "./gmailParser.js";
 
-const MAX_NEWSLETTERS_PER_USER = 10;
+const MAX_NEWSLETTERS_PER_USER = 50;
 
 // Parse the sender's name and email from the From header
 function parseSender(fromHeader: string): { name: string; email: string } {
@@ -35,7 +35,7 @@ export async function discoverNewslettersForUser(userId: string): Promise<number
   const response = await gmail.users.messages.list({
     userId: "me",
     q: "newer_than:30d",
-    maxResults: 25,
+    maxResults: 50,
   });
 
   //process messages

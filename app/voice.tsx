@@ -11,22 +11,18 @@ import { getTtsVoice, setTtsVoice } from '@/data/session';
 import { usePalette } from '@/hooks/use-palette';
 
 const voiceOptions = [
-  { value: 'alloy', label: 'Alloy', description: 'Balanced and clear.' },
-  { value: 'nova', label: 'Nova', description: 'Bright and lively.' },
-  { value: 'echo', label: 'Echo', description: 'Smooth and steady.' },
-  { value: 'fable', label: 'Fable', description: 'Warm and story-like.' },
-  { value: 'onyx', label: 'Onyx', description: 'Deep and grounded.' },
-  { value: 'shimmer', label: 'Shimmer', description: 'Soft and airy.' },
-  { value: 'ash', label: 'Ash', description: 'Crisp and neutral.' },
-  { value: 'sage', label: 'Sage', description: 'Calm and measured.' },
-  { value: 'coral', label: 'Coral', description: 'Friendly and upbeat.' },
+  { value: 'en-US-Chirp3-HD-Leda', label: 'Chirp3 HD (Leda)', description: 'Expressive and realistic high-definition female voice.' },
+  { value: 'en-US-Chirp3-HD-Charon', label: 'Chirp3 HD (Charon)', description: 'Expressive and realistic high-definition male voice.' },
+  { value: 'en-US-Chirp3-HD-Kore', label: 'Chirp3 HD (Kore)', description: 'Alternative high-definition female voice.' },
+  { value: 'en-US-Journey-F', label: 'Journey (Female)', description: 'Conversational and warm female voice.' },
+  { value: 'en-US-Journey-D', label: 'Journey (Male)', description: 'Conversational and friendly male voice.' },
 ];
 
 export default function VoiceSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const palette = usePalette();
-  const [voice, setVoice] = useState('alloy');
+  const [voice, setVoice] = useState('en-US-Chirp3-HD-Leda');
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewVoice, setPreviewVoice] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);

@@ -18,8 +18,10 @@ class LiveActivityModule: NSObject {
     @objc
     func startActivity(
         _ title: String,
+        userName: String,
         status: String,
         progress: Double,
+        durationMinutes: Int,
         resolver resolve: @escaping RCTPromiseResolveBlock,
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
@@ -29,11 +31,12 @@ class LiveActivityModule: NSObject {
                 return
             }
 
-            let attributes = PaperboyActivityAttributes(title: title)
+            let attributes = PaperboyActivityAttributes(title: title, userName: userName)
             let state = PaperboyActivityAttributes.ContentState(
                 progress: progress,
                 status: status,
-                isPlaying: false
+                isPlaying: false,
+                durationMinutes: durationMinutes
             )
 
             do {
@@ -59,6 +62,7 @@ class LiveActivityModule: NSObject {
         _ status: String,
         progress: Double,
         isPlaying: Bool,
+        durationMinutes: Int,
         resolver resolve: @escaping RCTPromiseResolveBlock,
         rejecter reject: @escaping RCTPromiseRejectBlock
     ) {
@@ -71,7 +75,8 @@ class LiveActivityModule: NSObject {
             let updatedState = PaperboyActivityAttributes.ContentState(
                 progress: progress,
                 status: status,
-                isPlaying: isPlaying
+                isPlaying: isPlaying,
+                durationMinutes: durationMinutes
             )
 
             Task {
@@ -102,7 +107,8 @@ class LiveActivityModule: NSObject {
             let finalState = PaperboyActivityAttributes.ContentState(
                 progress: 1.0,
                 status: status,
-                isPlaying: false
+                isPlaying: false,
+                durationMinutes: activity.content.state.durationMinutes
             )
 
             Task {

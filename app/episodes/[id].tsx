@@ -27,15 +27,11 @@ import { useRequireUser } from '@/hooks/use-require-user';
 
 const brandName = 'Paperboy';
 const voiceLabelByValue: Record<string, string> = {
-  alloy: 'Alloy',
-  nova: 'Nova',
-  echo: 'Echo',
-  fable: 'Fable',
-  onyx: 'Onyx',
-  shimmer: 'Shimmer',
-  ash: 'Ash',
-  sage: 'Sage',
-  coral: 'Coral',
+  'en-US-Chirp3-HD-Leda': 'Chirp3 HD (Leda)',
+  'en-US-Chirp3-HD-Charon': 'Chirp3 HD (Charon)',
+  'en-US-Chirp3-HD-Kore': 'Chirp3 HD (Kore)',
+  'en-US-Journey-F': 'Journey (Female)',
+  'en-US-Journey-D': 'Journey (Male)',
 };
 
 export default function EpisodeDetailScreen() {
@@ -98,7 +94,7 @@ export default function EpisodeDetailScreen() {
     void loadEpisode();
   }, [id, hasUser]);
 
-  const voiceLabel = voiceLabelByValue[episode?.voice ?? ''] ?? 'Alloy';
+  const voiceLabel = voiceLabelByValue[episode?.voice ?? ''] ?? 'Chirp3 HD (Leda)';
 
   const handlePlaybackStatus = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) {
@@ -377,6 +373,7 @@ export default function EpisodeDetailScreen() {
       height: 42,
       borderRadius: 12,
       resizeMode: 'contain',
+      tintColor: palette.primaryText,
     },
     brandText: {
       color: palette.primaryText,

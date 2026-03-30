@@ -20,6 +20,8 @@ function isAvailable(): boolean {
  */
 async function start(params: {
   title: string;
+  userName?: string;
+  durationMinutes?: number;
   status?: string;
   progress?: number;
 }): Promise<string | null> {
@@ -27,8 +29,10 @@ async function start(params: {
   try {
     const activityId: string = await LiveActivityModule.startActivity(
       params.title,
+      params.userName ?? 'There',
       params.status ?? 'Starting...',
       params.progress ?? 0,
+      params.durationMinutes ?? 0
     );
     return activityId;
   } catch (error) {
@@ -48,6 +52,7 @@ async function update(params: {
   status?: string;
   progress?: number;
   isPlaying?: boolean;
+  durationMinutes?: number;
 }): Promise<void> {
   if (!isAvailable()) return;
   try {
@@ -55,6 +60,7 @@ async function update(params: {
       params.status ?? '',
       params.progress ?? 0,
       params.isPlaying ?? false,
+      params.durationMinutes ?? 0
     );
   } catch (error) {
     console.warn('[LiveActivity] update failed:', error);

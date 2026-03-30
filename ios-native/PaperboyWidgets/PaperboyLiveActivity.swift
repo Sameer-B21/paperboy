@@ -71,46 +71,59 @@ struct PaperboyLiveActivity: Widget {
 
     @ViewBuilder
     private func lockScreenView(context: ActivityViewContext<PaperboyActivityAttributes>) -> some View {
-        HStack(spacing: 14) {
-            // Icon
-            ZStack {
-                Circle()
-                    .fill(Color.blue.opacity(0.15))
-                    .frame(width: 44, height: 44)
-                Image(systemName: "newspaper.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.blue)
-            }
+        let greeting = "Good morning, \(context.attributes.userName)."
+        let durationText = context.state.durationMinutes > 0 ? " • \(context.state.durationMinutes) minutes" : ""
+        let isReady = context.state.progress >= 1.0
+        let statusText = isReady ? "Your paper is ready\(durationText)" : context.state.status
 
-            // Text + progress
-            VStack(alignment: .leading, spacing: 4) {
-                Text(context.attributes.title)
-                    .font(.headline)
-                    .lineLimit(1)
-                Text(context.state.status)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                ProgressView(value: context.state.progress)
-                    .tint(.blue)
-            }
-
-            Spacer(minLength: 0)
-
-            // Play/Pause button
-            Link(destination: Self.toggleURL) {
-                ZStack {
-                    Circle()
-                        .fill(Color.blue)
-                        .frame(width: 44, height: 44)
-                    Image(systemName: context.state.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 18, weight: .bold))
+        Link(destination: Self.toggleURL) {
+            HStack(alignment: .center, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(greeting)
+                        .font(.custom("Palatino", size: 24)) // Serif-like font
+                        .fontWeight(.medium)
                         .foregroundColor(.white)
+                        .lineLimit(1)
+                    
+                    Text(statusText)
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.9))
+                        .lineLimit(1)
+                    
+                    if !isReady {
+                        ProgressView(value: context.state.progress)
+                            .tint(.white)
+                            .padding(.top, 4)
+                    }
+                }
+                
+                Spacer(minLength: 0)
+                
+                ZStack {
+                    if isReady {
+                        Image(systemName: "newspaper")
+                            .font(.system(size: 40, weight: .light))
+                            .foregroundColor(.white)
+                    } else {
+                        Image(systemName: context.state.isPlaying ? "pause.circle" : "play.circle")
+                            .font(.system(size: 40, weight: .light))
+                            .foregroundColor(.white)
+                    }
                 }
             }
+            .padding(20)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color(red: 0.45, green: 0.35, blue: 0.35).opacity(0.6),
+                        Color(red: 0.25, green: 0.20, blue: 0.25).opacity(0.6)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
         }
-        .padding(16)
-        .activityBackgroundTint(.black.opacity(0.75))
+        .activityBackgroundTint(Color.clear)
         .activitySystemActionForegroundColor(.white)
     }
 }

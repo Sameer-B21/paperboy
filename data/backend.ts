@@ -207,3 +207,15 @@ export async function getLatestDailyEpisode(): Promise<EpisodeDetail | null> {
   }
   return (await response.json()) as EpisodeDetail;
 }
+
+export async function fetchUserProfile(): Promise<UserProfile> {
+  await requireUserId();
+  const response = await fetch(`${API_BASE_URL}/users/me`, {
+    headers: await buildHeaders(false),
+  });
+  if (!response.ok) {
+    throw new Error('Unable to load user profile.');
+  }
+  const payload = (await response.json()) as { user: UserProfile };
+  return payload.user;
+}

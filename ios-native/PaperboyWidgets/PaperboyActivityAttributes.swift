@@ -10,8 +10,12 @@ struct PaperboyActivityAttributes: ActivityAttributes {
         var status: String
         /// Whether audio is currently playing.
         var isPlaying: Bool
+        /// Duration of the podcast in minutes
+        var durationMinutes: Int
     }
 
     /// Title shown in the Live Activity (e.g. "Tech News Brief").
     var title: String
+    /// User name for the greeting.
+    var userName: String
 }

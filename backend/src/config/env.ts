@@ -21,6 +21,7 @@ export type Env = {
   OPENAI_TTS_VOICE?: string;
   OPENAI_TTS_PRICE_PER_1M_CHARS?: string;
   FRONTEND_URL?: string;
+  GOOGLE_TTS_API_KEY: string;
 };
 
 //function that forcess specific environment variables to exist and returns value
@@ -50,4 +51,5 @@ export const env: Env = {
   OPENAI_TTS_VOICE: process.env.OPENAI_TTS_VOICE,
   OPENAI_TTS_PRICE_PER_1M_CHARS: process.env.OPENAI_TTS_PRICE_PER_1M_CHARS,
   FRONTEND_URL: process.env.FRONTEND_URL,
+  GOOGLE_TTS_API_KEY: requireEnv("GOOGLE_TTS_API_KEY"),
 };

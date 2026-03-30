@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 
-import { updateUser } from "../db/queries/users.sql.js";
+import { getUserById, updateUser } from "../db/queries/users.sql.js";
 import { AppError } from "../utils/errors.js";
 
 function readUserId(req: Request): string {
@@ -23,4 +23,14 @@ export async function updateUserPreferences(req: Request, res: Response) {
     await updateUser(userId, { podcastDurationMinutes: parsed });
   }
   res.json({ ok: true });
+}
+
+export async function getCurrentUser(req: Request, res: Response) {
+  const userId = readUserId(req);
+  const user = await getUserById(userId);
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  res.json({ user });
 }

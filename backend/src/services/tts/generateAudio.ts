@@ -1,52 +1,39 @@
 import { env } from "../../config/env.js";
 import { logger } from "../../utils/logger.js";
 
-function estimateTokensFromChars(charCount: number): number {
-  return Math.ceil(charCount / 4);
-}
-
-function formatTtsCost(model: string, charCount: number): string {
-  const tokens = estimateTokensFromChars(charCount);
-  const pricePer1MChars = env.OPENAI_TTS_PRICE_PER_1M_CHARS
-    ? Number.parseFloat(env.OPENAI_TTS_PRICE_PER_1M_CHARS)
-    : null;
-
-  if (!pricePer1MChars || Number.isNaN(pricePer1MChars)) {
-    return `chars ${charCount}; est tokens ${tokens}; cost unknown`;
-  }
-
-  const cost = (charCount / 1_000_000) * pricePer1MChars;
-  return `chars ${charCount}; est tokens ${tokens}; est cost $${cost.toFixed(6)}`;
-}
-
-// Generate audio with OpenAI's TTS endpoint.
+// Generate audio with Google Cloud TTS REST API.
 export async function generateAudio(script: string, voice?: string): Promise<Buffer> {
-  if (!env.OPENAI_API_KEY) {
-    throw new Error("Missing OPENAI_API_KEY.");
+  if (!env.GOOGLE_TTS_API_KEY) {
+    throw new Error("Missing GOOGLE_TTS_API_KEY.");
   }
 
-  const model = env.OPENAI_TTS_MODEL ?? "gpt-4o-mini-tts";
-  const selectedVoice = voice?.trim() || env.OPENAI_TTS_VOICE || "alloy";
-  const response = await fetch("https://api.openai.com/v1/audio/speech", {
+  const voiceName = voice?.trim() || "en-US-Chirp3-HD-Leda";
+  const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${env.GOOGLE_TTS_API_KEY}`;
+
+  const response = await fetch(url, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model,
-      voice: selectedVoice,
-      input: script,
-      response_format: "mp3",
+      input: { text: script },
+      voice: { languageCode: "en-US", name: voiceName },
+      audioConfig: { audioEncoding: "MP3" },
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`OpenAI TTS request failed: ${response.status} ${errorText}`);
+    throw new Error(`Google TTS request failed: ${response.status} ${errorText}`);
   }
 
-  const arrayBuffer = await response.arrayBuffer();
-  logger.info(`OpenAI TTS usage (${model}): ${formatTtsCost(model, script.length)}`);
-  return Buffer.from(arrayBuffer);
+  const data = await response.json() as { audioContent?: string };
+  if (!data.audioContent) {
+    throw new Error("Google TTS response missing audioContent.");
+  }
+
+  logger.info(`Google Cloud TTS usage (${voiceName}): characters ${script.length}`);
+  
+  // Google returns audio as a base64 encoded string
+  return Buffer.from(data.audioContent, "base64");
 }
