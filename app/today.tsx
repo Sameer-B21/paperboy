@@ -1013,7 +1013,7 @@ export default function TodayScreen() {
           </View>
         </View>}
 
-        {/* {!hasAudio && hasDigest && episodeSummary ? (
+        {!hasAudio && hasDigest && episodeSummary ? (
           <View style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>Today's brief</Text>
             <Text style={styles.summaryText}>{episodeSummary}</Text>
@@ -1042,7 +1042,7 @@ export default function TodayScreen() {
             ) : null}
             {episodeTitle ? <Text style={styles.summaryMeta}>{episodeTitle}</Text> : null}
           </View>
-        ) : null} */}
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

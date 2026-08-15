@@ -1,7 +1,8 @@
 import { createEpisode, getEpisodeBySourceMessageId } from "../../db/queries/episodes.sql.js";
 import { listNewsletters, upsertNewsletter } from "../../db/queries/newsletters.sql.js";
+import { AppError } from "../../utils/errors.js";
 import { loadConnectionTokens } from "../security/tokenStore.js";
-import { createGmailClient } from "./gmailClient.js";
+import { createGmailClient, isInvalidGrantError } from "./gmailClient.js";
 import { isNewsletterEmail } from "./gmailFilters.js";
 import { parseMessage } from "./gmailParser.js";
 
@@ -27,19 +28,26 @@ export async function discoverNewslettersForUser(userId: string): Promise<number
   //check connection
   const connection = await loadConnectionTokens(userId, "gmail");
   if (!connection) {
-    throw new Error("No Gmail connection found.");
+    throw new AppError("No Gmail connection found.", 404);
   }
 
   //list recent messages
   const { gmail } = createGmailClient(connection);
-  const response = await gmail.users.messages.list({
-    userId: "me",
-    q: "newer_than:30d",
-    maxResults: 50,
-  });
+  let messageIds: Array<{ id?: string | null }> = [];
+  try {
+    const response = await gmail.users.messages.list({
+      userId: "me",
+      q: "newer_than:30d",
+      maxResults: 50,
+    });
+    messageIds = response.data.messages ?? [];
+  } catch (error) {
+    if (isInvalidGrantError(error)) {
+      throw new AppError("Google access has expired. Please sign in again.", 401);
+    }
+    throw error;
+  }
 
-  //process messages
-  const messageIds = response.data.messages ?? [];
   if (messageIds.length === 0) {
     return 0;
   }
@@ -61,32 +69,39 @@ export async function discoverNewslettersForUser(userId: string): Promise<number
     if (!message.id) {
       continue;
     }
-    //get message details
-    const detailResponse = await gmail.users.messages.get({
-      userId: "me",
-      id: message.id,
-      format: "full",
-    });
-    //parse message
-    const parsed = parseMessage(detailResponse.data as never);
-    if (!parsed || !isNewsletterEmail(parsed.headers)) {
-      continue;
-    }
-    //check if newsletter already exists
-    const sender = parseSender(parsed.from);
-    const existingNewsletter = newsletterIndex.get(sender.email.toLowerCase());
-    if (!existingNewsletter) {
-      if (discoveredCount >= remainingSlots) {
-        break;
-      }
-      const newsletter = await upsertNewsletter({
-        userId,
-        name: sender.name || sender.email,
-        sender: sender.email,
-        selected: false,
+    try {
+      //get message details
+      const detailResponse = await gmail.users.messages.get({
+        userId: "me",
+        id: message.id,
+        format: "full",
       });
-      newsletterIndex.set(sender.email.toLowerCase(), newsletter);
-      discoveredCount += 1;
+      //parse message
+      const parsed = parseMessage(detailResponse.data as never);
+      if (!parsed || !isNewsletterEmail(parsed.headers)) {
+        continue;
+      }
+      //check if newsletter already exists
+      const sender = parseSender(parsed.from);
+      const existingNewsletter = newsletterIndex.get(sender.email.toLowerCase());
+      if (!existingNewsletter) {
+        if (discoveredCount >= remainingSlots) {
+          break;
+        }
+        const newsletter = await upsertNewsletter({
+          userId,
+          name: sender.name || sender.email,
+          sender: sender.email,
+          selected: false,
+        });
+        newsletterIndex.set(sender.email.toLowerCase(), newsletter);
+        discoveredCount += 1;
+      }
+    } catch (error) {
+      if (isInvalidGrantError(error)) {
+        throw new AppError("Google access has expired. Please sign in again.", 401);
+      }
+      throw error;
     }
   }
 
@@ -101,19 +116,26 @@ export async function ingestNewsletterForUser(
   //check connection
   const connection = await loadConnectionTokens(userId, "gmail");
   if (!connection) {
-    throw new Error("No Gmail connection found.");
+    throw new AppError("No Gmail connection found.", 404);
   }
 
   //list recent messages from sender
   const { gmail } = createGmailClient(connection);
-  const response = await gmail.users.messages.list({
-    userId: "me",
-    q: `from:${senderEmail} newer_than:1d`,
-    maxResults: 25,
-  });
+  let messageIds: Array<{ id?: string | null }> = [];
+  try {
+    const response = await gmail.users.messages.list({
+      userId: "me",
+      q: `from:${senderEmail} newer_than:1d`,
+      maxResults: 25,
+    });
+    messageIds = response.data.messages ?? [];
+  } catch (error) {
+    if (isInvalidGrantError(error)) {
+      throw new AppError("Google access has expired. Please sign in again.", 401);
+    }
+    throw error;
+  }
 
-  //process messages
-  const messageIds = response.data.messages ?? [];
   if (messageIds.length === 0) {
     return [];
   }
@@ -135,34 +157,41 @@ export async function ingestNewsletterForUser(
     if (!message.id) {
       continue;
     }
-    //get message details and parse messages
-    const detailResponse = await gmail.users.messages.get({
-      userId: "me",
-      id: message.id,
-      format: "full",
-    });
-    const parsed = parseMessage(detailResponse.data as never);
-    if (!parsed || !isNewsletterEmail(parsed.headers)) {
-      continue;
+    try {
+      //get message details and parse messages
+      const detailResponse = await gmail.users.messages.get({
+        userId: "me",
+        id: message.id,
+        format: "full",
+      });
+      const parsed = parseMessage(detailResponse.data as never);
+      if (!parsed || !isNewsletterEmail(parsed.headers)) {
+        continue;
+      }
+      //check for existing episode
+      const existingEpisode = await getEpisodeBySourceMessageId(userId, parsed.id);
+      if (existingEpisode) {
+        continue;
+      }
+      //create episode
+      const episode = await createEpisode({
+        userId,
+        newsletterId: newsletter.id,
+        subject: parsed.subject,
+        sourceMessageId: parsed.id,
+        body: parsed.body,
+      });
+      createdEpisodes.push({
+        episodeId: episode.id,
+        subject: parsed.subject,
+        body: parsed.body,
+      });
+    } catch (error) {
+      if (isInvalidGrantError(error)) {
+        throw new AppError("Google access has expired. Please sign in again.", 401);
+      }
+      throw error;
     }
-    //check for existing episode
-    const existingEpisode = await getEpisodeBySourceMessageId(userId, parsed.id);
-    if (existingEpisode) {
-      continue;
-    }
-    //create episode
-    const episode = await createEpisode({
-      userId,
-      newsletterId: newsletter.id,
-      subject: parsed.subject,
-      sourceMessageId: parsed.id,
-      body: parsed.body,
-    });
-    createdEpisodes.push({
-      episodeId: episode.id,
-      subject: parsed.subject,
-      body: parsed.body,
-    });
   }
 
   return createdEpisodes;

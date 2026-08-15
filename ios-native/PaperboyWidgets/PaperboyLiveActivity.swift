@@ -71,7 +71,8 @@ struct PaperboyLiveActivity: Widget {
 
     @ViewBuilder
     private func lockScreenView(context: ActivityViewContext<PaperboyActivityAttributes>) -> some View {
-        let greeting = "Good morning, \(context.attributes.userName)."
+        let firstName = context.attributes.userName.components(separatedBy: .whitespaces).first ?? context.attributes.userName
+        let greeting = "Good morning, \(firstName)."
         let durationText = context.state.durationMinutes > 0 ? " • \(context.state.durationMinutes) minutes" : ""
         let isReady = context.state.progress >= 1.0
         let statusText = isReady ? "Your paper is ready\(durationText)" : context.state.status
@@ -84,6 +85,7 @@ struct PaperboyLiveActivity: Widget {
                         .fontWeight(.medium)
                         .foregroundColor(.white)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.6)
                     
                     Text(statusText)
                         .font(.subheadline)

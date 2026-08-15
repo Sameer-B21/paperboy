@@ -828,7 +828,7 @@ export default function EpisodeDetailScreen() {
           </View>
         ) : null}
 
-        {/* {episode?.script || episode?.summary ? (
+        {episode?.script || episode?.summary ? (
           <View style={styles.summaryCard} accessibilityRole="summary">
             <View style={styles.summaryHeaderRow}>
               <Text style={styles.summaryTitle}>Script</Text>
@@ -852,7 +852,7 @@ export default function EpisodeDetailScreen() {
               <Text style={styles.summaryMeta}>{episode.subject}</Text>
             ) : null}
           </View>
-        ) : null} */}
+        ) : null}
 
       </ScrollView>
     </SafeAreaView>

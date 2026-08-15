@@ -18,3 +18,16 @@ export function createGmailClient(connection: Connection) {
 
   return { gmail, client };
 }
+
+//helper to identify OAuth invalid_grant errors
+export function isInvalidGrantError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as any;
+  return (
+    err.response?.data?.error === "invalid_grant" ||
+    err.error === "invalid_grant" ||
+    err.code === "invalid_grant" ||
+    (typeof err.message === "string" && err.message.includes("invalid_grant"))
+  );
+}
+

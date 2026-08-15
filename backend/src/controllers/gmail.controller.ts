@@ -21,8 +21,8 @@ export async function syncGmail(req: Request, res: Response) {
     const result = await enqueueGmailDiscovery(userId);
     res.json(result);
   } catch (error: any) {
-    if (error?.response?.data?.error === "invalid_grant") {
-      res.status(401).json({ error: "Google access has expired. Please sign in again." });
+    if (error?.response?.data?.error === "invalid_grant" || (error instanceof AppError && error.status === 401)) {
+      res.status(401).json({ error: error.message || "Google access has expired. Please sign in again." });
       return;
     }
     throw error;

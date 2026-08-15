@@ -10,6 +10,7 @@ import { runDailyDigestForUser } from "../jobs/workers/dailyDigest.worker.js";
 import { ingestNewsletterForUser } from "../services/gmail/gmailSync.js";
 import { downloadAudio } from "../services/storage/uploadAudio.js";
 import { AppError } from "../utils/errors.js";
+import { logger } from "../utils/logger.js";
 import { normalizeTtsVoice } from "../utils/tts.js";
 
 function buildEpisodeAudioUrl(episodeId: string, userId: string, cacheKey?: string): string {
@@ -101,9 +102,17 @@ export async function generateDailyEpisode(req: Request, res: Response) {
   // This ensures the database has the latest inbound emails before generating!
   const newsletters = await listNewsletters(userId);
   const activeNewsletters = newsletters.filter((n) => n.selected);
-  await Promise.all(
-    activeNewsletters.map((sub) => ingestNewsletterForUser(userId, sub.sender))
-  );
+  try {
+    await Promise.all(
+      activeNewsletters.map((sub) => ingestNewsletterForUser(userId, sub.sender))
+    );
+  } catch (error: any) {
+    if (error instanceof AppError && error.status === 401) {
+      logger.warn(`Gmail connection expired for user ${userId} during daily episode ingestion.`);
+    } else {
+      logger.warn(`Failed syncing latest emails for user ${userId}: ${error?.message}`);
+    }
+  }
 
   const episodeId = await runDailyDigestForUser(userId, now, {
     force: true,

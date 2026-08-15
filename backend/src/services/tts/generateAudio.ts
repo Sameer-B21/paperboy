@@ -33,7 +33,7 @@ export async function generateAudio(script: string, voice?: string): Promise<Buf
   }
 
   logger.info(`Google Cloud TTS usage (${voiceName}): characters ${script.length}`);
-  
+
   // Google returns audio as a base64 encoded string
   return Buffer.from(data.audioContent, "base64");
 }
