@@ -53,7 +53,7 @@ const buildHeaders = async (isJson = true): Promise<HeadersInit> => {
 async function requireUserId(): Promise<string> {
   const userId = await getUserId();
   if (!userId) {
-    throw new Error('Missing EXPO_PUBLIC_USER_ID for backend requests.');
+    throw new Error('No user session found — please sign in again.');
   }
   return userId;
 }

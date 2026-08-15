@@ -132,6 +132,9 @@ function withLiveActivityXcodeProject(config) {
       cfg.ios?.bundleIdentifier || "com.anonymous.NewsletterPodcaster";
     const widgetBundleId = `${bundleId}.PaperboyWidgets`;
     const widgetTargetName = "PaperboyWidgets";
+    // App Store rejects builds where the extension's version/build differ from the app's.
+    const appVersion = cfg.version || "1.0.0";
+    const appBuildNumber = cfg.ios?.buildNumber || "1";
 
     // ── Add native module files to main app target ──
 
@@ -225,15 +228,7 @@ function withLiveActivityXcodeProject(config) {
       );
     }
 
-    // 6.5 Add Assets safely bypassing the node-xcode addResourceFile crash
-    const file = proj.addFile("Assets.xcassets", widgetGroupKey, {
-      lastKnownFileType: "folder.assetcatalog",
-      sourceTree: '"<group>"',
-    });
-    file.uuid = proj.generateUuid();
-    file.target = extTarget.uuid;
-    proj.addToPbxBuildFileSection(file);
-    proj.addToPbxResourcesBuildPhase(file);
+
 
     // 7. Add WidgetKit and SwiftUI frameworks to the extension
     proj.addFramework("WidgetKit.framework", {
@@ -270,8 +265,8 @@ function withLiveActivityXcodeProject(config) {
           SWIFT_VERSION: "5.0",
           CODE_SIGN_STYLE: "Automatic",
           GENERATE_INFOPLIST_FILE: "YES",
-          CURRENT_PROJECT_VERSION: "1",
-          MARKETING_VERSION: "1.0",
+          CURRENT_PROJECT_VERSION: appBuildNumber,
+          MARKETING_VERSION: appVersion,
           PRODUCT_BUNDLE_IDENTIFIER: quoted(widgetBundleId),
           TARGETED_DEVICE_FAMILY: quoted("1,2"),
           INFOPLIST_KEY_CFBundleDisplayName: quoted("Paperboy Widgets"),

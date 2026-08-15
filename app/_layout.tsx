@@ -19,7 +19,6 @@ export default function RootLayout() {
         <Stack.Screen name="archive" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="episodes/[id]" />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
