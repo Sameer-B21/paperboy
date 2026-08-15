@@ -80,3 +80,11 @@ export async function upsertConnection(payload: {
   }
   return toConnection(data as ConnectionRow);
 }
+
+// Deletes all of a user's provider connections
+export async function deleteConnectionsByUser(userId: string): Promise<void> {
+  const { error } = await supabase.from("connections").delete().eq("user_id", userId);
+  if (error) {
+    throw new Error(`Failed to delete connections: ${error.message}`);
+  }
+}

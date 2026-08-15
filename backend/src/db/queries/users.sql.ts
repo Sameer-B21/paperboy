@@ -93,3 +93,11 @@ export async function listUsers(): Promise<User[]> {
   }
   return (data ?? []).map((row) => toUser(row as UserRow));
 }
+
+// Deletes a user row
+export async function deleteUserById(userId: string): Promise<void> {
+  const { error } = await supabase.from("users").delete().eq("id", userId);
+  if (error) {
+    throw new Error(`Failed to delete user: ${error.message}`);
+  }
+}

@@ -2,6 +2,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,8 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/constants/links';
 import { Fonts } from '@/constants/theme';
-import { listNewsletters } from '@/data/backend';
+import { deleteAccount, listNewsletters, logoutOnServer } from '@/data/backend';
 import {
   clearAuthToken,
   clearOnboardingStep,
@@ -88,13 +92,48 @@ export default function SettingsScreen() {
     }, [loadSession, loadNewsletterCount])
   );
 
-  const handleLogout = async () => {
+  const clearLocalSession = async () => {
     await clearAuthToken();
     await clearUserEmail();
     await clearTtsVoice();
     await clearOnboardingStep();
     await clearPodcastDurationMinutes();
+  };
+
+  const handleLogout = async () => {
+    // Revoke server-side Gmail access first, while the session token still exists.
+    await logoutOnServer();
+    await clearLocalSession();
     router.replace('/onboarding/connect');
+  };
+
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const confirmDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteAccount();
+      await clearLocalSession();
+      router.replace('/onboarding/connect');
+    } catch (error) {
+      Alert.alert(
+        'Delete failed',
+        error instanceof Error ? error.message : 'Unable to delete account. Please try again.'
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete account?',
+      'This permanently disconnects your Gmail and erases your account, episodes, and audio. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => void confirmDeleteAccount() },
+      ]
+    );
   };
 
   const voiceLabel = voiceLabelByValue[ttsVoice] ?? 'Chirp3 HD (Leda)';
@@ -211,6 +250,19 @@ export default function SettingsScreen() {
       fontFamily: Fonts.sans,
       fontWeight: '600',
     },
+    deleteButton: {
+      marginTop: 12,
+      paddingVertical: 14,
+      borderRadius: 14,
+      backgroundColor: '#DC2626',
+      alignItems: 'center',
+    },
+    deleteText: {
+      color: '#fff',
+      fontSize: 15,
+      fontFamily: Fonts.sans,
+      fontWeight: '600',
+    },
   }), [palette]);
 
   return (
@@ -315,10 +367,70 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {isConnected ? (
-          <TouchableOpacity style={styles.logoutButton} activeOpacity={0.85} onPress={handleLogout}>
-            <Text style={styles.logoutText}>Log out</Text>
+        <Text style={styles.sectionLabel}>About</Text>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+          >
+            <View style={styles.iconBubble}>
+              <Ionicons name="shield-checkmark-outline" size={18} color={palette.icon} />
+            </View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowTitle}>Privacy Policy</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
           </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => void Linking.openURL(TERMS_URL)}
+          >
+            <View style={styles.iconBubble}>
+              <Ionicons name="document-text-outline" size={18} color={palette.icon} />
+            </View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowTitle}>Terms of Service</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => void Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
+          >
+            <View style={styles.iconBubble}>
+              <Ionicons name="help-buoy-outline" size={18} color={palette.icon} />
+            </View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowTitle}>Contact Support</Text>
+              <Text style={styles.rowSubtitle}>{SUPPORT_EMAIL}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
+          </TouchableOpacity>
+        </View>
+
+        {isConnected ? (
+          <>
+            <TouchableOpacity style={styles.logoutButton} activeOpacity={0.85} onPress={handleLogout}>
+              <Text style={styles.logoutText}>Log out</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              activeOpacity={0.85}
+              onPress={handleDeleteAccount}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.deleteText}>Delete Account</Text>
+              )}
+            </TouchableOpacity>
+          </>
         ) : null}
       </ScrollView>
     </SafeAreaView>

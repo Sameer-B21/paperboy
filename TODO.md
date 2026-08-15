@@ -35,12 +35,12 @@ Roadmap for getting Paperboy published on the iOS App Store.
 
 > Note: existing installs must sign in again (old sessions used the removed user-id model).
 
-## Part 3 — Features Apple requires
+## Part 3 — Features Apple requires ✅ DONE (code)
 
-- [ ] **Account deletion in-app** (Guideline 5.1.1(v) — hard blocker): backend route that revokes the Google token + wipes all user data & audio, confirmation UI in settings
-- [ ] Fix logout to notify the backend (today the server keeps Gmail access after logout)
-- [ ] Sign in with Apple: likely exempt (app is a client for one specific service — Gmail); write reviewer notes; add only if review pushes back
-- [ ] Settings links: privacy policy, terms, support contact
+- [x] **Account deletion in-app**: `DELETE /users/me` revokes the Google token, removes audio files, wipes all rows; "Delete Account" button with confirmation in settings (verified end-to-end)
+- [x] Logout now calls `POST /auth/logout` — server revokes + drops its Gmail tokens
+- [x] Settings links: Privacy Policy, Terms, Contact Support (**URLs are placeholders in `constants/links.ts` — replace with real hosted URLs before submission**)
+- [ ] Sign in with Apple: likely exempt (app is a client for one specific service — Gmail); write reviewer notes for App Store Connect; add only if review pushes back
 
 ## Part 4 — Deployment
 

@@ -83,3 +83,11 @@ export async function updateNewsletterSelection(
   }
   return toNewsletter(data as NewsletterRow);
 }
+
+// Deletes all of a user's newsletters
+export async function deleteNewslettersByUser(userId: string): Promise<void> {
+  const { error } = await supabase.from("newsletters").delete().eq("user_id", userId);
+  if (error) {
+    throw new Error(`Failed to delete newsletters: ${error.message}`);
+  }
+}

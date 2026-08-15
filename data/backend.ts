@@ -181,6 +181,31 @@ export async function getLatestDailyEpisode(): Promise<EpisodeDetail | null> {
   return (await response.json()) as EpisodeDetail;
 }
 
+//tells the server to revoke + drop its stored Gmail tokens; best effort —
+//local logout should not be blocked by a network failure
+export async function logoutOnServer(): Promise<void> {
+  try {
+    await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: await buildHeaders(false),
+    });
+  } catch {
+    // Ignore network errors; the local session is cleared regardless.
+  }
+}
+
+//permanently deletes the account and all server-side data
+export async function deleteAccount(): Promise<void> {
+  await requireSession();
+  const response = await fetch(`${API_BASE_URL}/users/me`, {
+    method: 'DELETE',
+    headers: await buildHeaders(false),
+  });
+  if (!response.ok) {
+    throw new Error('Unable to delete account. Please try again.');
+  }
+}
+
 export async function fetchUserProfile(): Promise<UserProfile> {
   await requireSession();
   const response = await fetch(`${API_BASE_URL}/users/me`, {

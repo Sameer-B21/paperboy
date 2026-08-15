@@ -221,3 +221,11 @@ export async function getLatestDailyDigest(userId: string): Promise<Episode | nu
   }
   return data ? toEpisode(data as EpisodeRow) : null;
 }
+
+// Deletes all of a user's episodes
+export async function deleteEpisodesByUser(userId: string): Promise<void> {
+  const { error } = await supabase.from("episodes").delete().eq("user_id", userId);
+  if (error) {
+    throw new Error(`Failed to delete episodes: ${error.message}`);
+  }
+}

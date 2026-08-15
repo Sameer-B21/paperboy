@@ -34,3 +34,14 @@ export async function downloadAudio(
 ): Promise<{ data: Buffer; contentType?: string }> {
   return downloadAudioAtPath(path);
 }
+
+// Remove audio files from Supabase Storage (best effort, used by account deletion)
+export async function removeAudioAtPaths(paths: string[]): Promise<void> {
+  if (paths.length === 0) {
+    return;
+  }
+  const { error } = await supabase.storage.from(audioBucket).remove(paths);
+  if (error) {
+    throw new Error(`Failed to remove audio files: ${error.message}`);
+  }
+}

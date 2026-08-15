@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 
 import { getUserById, updateUser } from "../db/queries/users.sql.js";
+import { deleteAccount } from "../services/security/accountDeletion.js";
 import { AppError } from "../utils/errors.js";
 
 //the verified user id is set by the requireUser middleware from the session token
@@ -33,4 +34,11 @@ export async function getCurrentUser(req: Request, res: Response) {
     return;
   }
   res.json({ user });
+}
+
+//permanently deletes the account: revokes Gmail access, wipes audio and rows
+export async function deleteCurrentUser(req: Request, res: Response) {
+  const userId = readUserId(req);
+  await deleteAccount(userId);
+  res.json({ ok: true });
 }

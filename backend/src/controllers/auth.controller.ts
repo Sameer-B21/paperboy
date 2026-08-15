@@ -6,6 +6,7 @@ import { env } from "../config/env.js";
 import { createOAuthClient, gmailScopes } from "../config/googleOAuth.js";
 import { createUser, getUserByEmail } from "../db/queries/users.sql.js";
 import { issueSessionToken } from "../middleware/requireUser.js";
+import { disconnectGmail } from "../services/security/accountDeletion.js";
 import { storeConnectionTokens } from "../services/security/tokenStore.js";
 import { toIsoDate } from "../utils/time.js";
 
@@ -135,4 +136,15 @@ export async function handleGoogleCallback(req: Request, res: Response) {
     isNew: isNewUser,
     redirect: `${env.BASE_URL}/settings`,
   });
+}
+
+//logout: the app clears its token locally, and the server revokes + drops
+//the stored Gmail tokens so access doesn't outlive the session
+export async function logout(req: Request, res: Response) {
+  if (!req.userId) {
+    res.status(401).json({ error: "Authentication required." });
+    return;
+  }
+  await disconnectGmail(req.userId);
+  res.json({ ok: true });
 }
