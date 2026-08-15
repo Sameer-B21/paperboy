@@ -1,6 +1,10 @@
 import cors from "cors";
 import express from "express";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 
+import { env } from "./config/env.js";
+import { requireUser } from "./middleware/requireUser.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { episodesRouter } from "./routes/episodes.routes.js";
 import { gmailRouter } from "./routes/gmail.routes.js";
@@ -13,9 +17,25 @@ import { AppError, toErrorMessage } from "./utils/errors.js";
 export function createApp() {
   const app = express();
 
+  // Behind a TLS-terminating proxy in production; needed for correct client
+  // IPs in rate limiting.
+  app.set("trust proxy", 1);
+
   // Middleware
-  app.use(cors());
+  app.use(helmet());
+  // The native app doesn't send an Origin header, so CORS only matters for
+  // browsers — allow only the configured web frontend, if any.
+  app.use(cors({ origin: env.FRONTEND_URL ? [env.FRONTEND_URL] : [] }));
   app.use(express.json({ limit: "2mb" }));
+
+  app.use(
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      limit: 300,
+      standardHeaders: true,
+      legacyHeaders: false,
+    })
+  );
 
   // Health check endpoint
   app.get("/health", (_req, res) => {
@@ -23,12 +43,16 @@ export function createApp() {
   });
 
   // Routes
-  app.use("/auth", authRouter);
-  app.use("/gmail", gmailRouter);
-  app.use("/episodes", episodesRouter);
+  app.use(
+    "/auth",
+    rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false }),
+    authRouter
+  );
+  app.use("/gmail", requireUser, gmailRouter);
+  app.use("/episodes", requireUser, episodesRouter);
   app.use("/webhooks", webhooksRouter);
-  app.use("/tts", ttsRouter);
-  app.use("/users", usersRouter);
+  app.use("/tts", requireUser, ttsRouter);
+  app.use("/users", requireUser, usersRouter);
 
   // 404 handler
   app.use((req, res) => {

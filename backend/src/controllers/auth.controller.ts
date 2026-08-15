@@ -1,17 +1,31 @@
 import type { Request, Response } from "express";
 import { google } from "googleapis";
+import jwt from "jsonwebtoken";
 
 import { env } from "../config/env.js";
-import { gmailScopes, oauthClient } from "../config/googleOAuth.js";
-import { createUser, getOrCreateUserByEmail, getUserByEmail } from "../db/queries/users.sql.js";
+import { createOAuthClient, gmailScopes } from "../config/googleOAuth.js";
+import { createUser, getUserByEmail } from "../db/queries/users.sql.js";
+import { issueSessionToken } from "../middleware/requireUser.js";
 import { storeConnectionTokens } from "../services/security/tokenStore.js";
-import { AppError } from "../utils/errors.js";
 import { toIsoDate } from "../utils/time.js";
-import { requireString } from "../utils/validate.js";
 
-//Creates the Google consent screen URL for user to go to when connecting email
+//only the app's own schemes may receive the post-auth redirect; http(s) is
+//limited to localhost during development so an attacker-supplied URL can
+//never capture the session token
+function isAllowedRedirect(candidate: URL): boolean {
+  const appSchemes = new Set(["newsletterpodcaster:", "paperboy:", "exp:"]);
+  if (appSchemes.has(candidate.protocol)) {
+    return true;
+  }
+  if (env.NODE_ENV !== "production" && (candidate.protocol === "http:" || candidate.protocol === "https:")) {
+    return candidate.hostname === "localhost" || candidate.hostname === "127.0.0.1";
+  }
+  return false;
+}
+
+//the state param is signed and short-lived so it cannot be forged or replayed
 function encodeRedirectState(redirect: string): string {
-  return Buffer.from(redirect, "utf8").toString("base64url");
+  return jwt.sign({ redirect }, env.AUTH_JWT_SECRET, { expiresIn: "15m" });
 }
 
 function decodeRedirectState(state: unknown): string | null {
@@ -19,13 +33,12 @@ function decodeRedirectState(state: unknown): string | null {
     return null;
   }
   try {
-    const decoded = Buffer.from(state, "base64url").toString("utf8");
-    if (!decoded) {
+    const payload = jwt.verify(state, env.AUTH_JWT_SECRET);
+    if (typeof payload === "string" || typeof payload.redirect !== "string") {
       return null;
     }
-    const candidate = new URL(decoded);
-    const allowedProtocols = new Set(["https:", "http:", "newsletterpodcaster:", "exp:"]);
-    if (!allowedProtocols.has(candidate.protocol)) {
+    const candidate = new URL(payload.redirect);
+    if (!isAllowedRedirect(candidate)) {
       return null;
     }
     return candidate.toString();
@@ -38,7 +51,7 @@ export async function getGoogleAuthUrl(req: Request, res: Response) {
   const redirectParam = req.query.redirect;
   const redirect =
     typeof redirectParam === "string" && redirectParam.length < 2000 ? redirectParam : null;
-  const url = oauthClient.generateAuthUrl({
+  const url = createOAuthClient().generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
     scope: gmailScopes,
@@ -46,19 +59,6 @@ export async function getGoogleAuthUrl(req: Request, res: Response) {
   });
 
   res.json({ url });
-}
-
-export async function signupWithEmail(req: Request, res: Response) {
-  const name = requireString(req.body?.name, "name");
-  const emailInput = requireString(req.body?.email, "email");
-  const email = emailInput.toLowerCase();
-  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailPattern.test(email)) {
-    throw new AppError("Enter a valid email address.");
-  }
-
-  const user = await getOrCreateUserByEmail(email, name);
-  res.json({ user });
 }
 
 //called by Google after the user approves access, Google redirects to GOOGLE_REDIRECT_URI, which points to this handler
@@ -71,6 +71,7 @@ export async function handleGoogleCallback(req: Request, res: Response) {
   }
 
   //using the code to get access token from google
+  const oauthClient = createOAuthClient();
   const { tokens } = await oauthClient.getToken(code);
   oauthClient.setCredentials(tokens);
   if (!tokens.access_token) {
@@ -103,10 +104,13 @@ export async function handleGoogleCallback(req: Request, res: Response) {
     email,
   });
 
+  //the signed session token is the app's credential for every later request
+  const sessionToken = issueSessionToken(user.id);
+
   const redirectTarget = decodeRedirectState(req.query.state);
   if (redirectTarget) {
     const redirectUrl = new URL(redirectTarget);
-    redirectUrl.searchParams.set("userId", user.id);
+    redirectUrl.searchParams.set("token", sessionToken);
     redirectUrl.searchParams.set("email", user.email);
     redirectUrl.searchParams.set("connected", "1");
     redirectUrl.searchParams.set("isNew", isNewUser ? "1" : "0");
@@ -117,7 +121,7 @@ export async function handleGoogleCallback(req: Request, res: Response) {
   //redirect user back to frontend
   if (env.FRONTEND_URL) {
     const redirectUrl = new URL("/settings", env.FRONTEND_URL);
-    redirectUrl.searchParams.set("userId", user.id);
+    redirectUrl.searchParams.set("token", sessionToken);
     redirectUrl.searchParams.set("email", user.email);
     redirectUrl.searchParams.set("connected", "1");
     redirectUrl.searchParams.set("isNew", isNewUser ? "1" : "0");
@@ -126,7 +130,7 @@ export async function handleGoogleCallback(req: Request, res: Response) {
   }
 
   res.json({
-    userId: user.id,
+    token: sessionToken,
     email: user.email,
     isNew: isNewUser,
     redirect: `${env.BASE_URL}/settings`,

@@ -15,6 +15,7 @@ export type Env = {
   GOOGLE_CLIENT_SECRET: string;
   GOOGLE_REDIRECT_URI: string;
   TOKEN_ENCRYPTION_KEY: string;
+  AUTH_JWT_SECRET: string;
   OPENAI_API_KEY: string;
   OPENAI_MODEL?: string;
   OPENAI_TTS_MODEL?: string;
@@ -45,6 +46,7 @@ export const env: Env = {
   GOOGLE_CLIENT_SECRET: requireEnv("GOOGLE_CLIENT_SECRET"),
   GOOGLE_REDIRECT_URI: requireEnv("GOOGLE_REDIRECT_URI"),
   TOKEN_ENCRYPTION_KEY: requireEnv("TOKEN_ENCRYPTION_KEY"),
+  AUTH_JWT_SECRET: requireEnv("AUTH_JWT_SECRET"),
   OPENAI_API_KEY: requireEnv("OPENAI_API_KEY"),
   OPENAI_MODEL: process.env.OPENAI_MODEL,
   OPENAI_TTS_MODEL: process.env.OPENAI_TTS_MODEL,

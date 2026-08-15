@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '@/constants/api';
-import { getUserId } from '@/data/session';
+import { getAuthToken } from '@/data/session';
 
 type NewsletterResponse = {
   id: string;
@@ -38,24 +38,25 @@ type UserProfile = {
   createdAt: string;
 };
 
+//auth headers for requests made outside this module (e.g. audio streaming)
+export const getAuthHeaders = async (): Promise<Record<string, string>> => {
+  const token = await getAuthToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const buildHeaders = async (isJson = true): Promise<HeadersInit> => {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = await getAuthHeaders();
   if (isJson) {
     headers['Content-Type'] = 'application/json';
-  }
-  const userId = await getUserId();
-  if (userId) {
-    headers['x-user-id'] = userId;
   }
   return headers;
 };
 
-async function requireUserId(): Promise<string> {
-  const userId = await getUserId();
-  if (!userId) {
+async function requireSession(): Promise<void> {
+  const token = await getAuthToken();
+  if (!token) {
     throw new Error('No user session found — please sign in again.');
   }
-  return userId;
 }
 
 export async function fetchAuthUrl(redirectUrl?: string): Promise<string> {
@@ -71,36 +72,8 @@ export async function fetchAuthUrl(redirectUrl?: string): Promise<string> {
   return payload.url;
 }
 
-export async function createUser({
-  name,
-  email,
-}: {
-  name: string;
-  email: string;
-}): Promise<UserProfile> {
-  const response = await fetch(`${API_BASE_URL}/auth/signup`, {
-    method: 'POST',
-    headers: await buildHeaders(true),
-    body: JSON.stringify({ name, email }),
-  });
-  if (!response.ok) {
-    let message = 'Unable to create account.';
-    try {
-      const payload = (await response.json()) as { error?: string };
-      if (payload?.error) {
-        message = payload.error;
-      }
-    } catch {
-      // Ignore JSON parse errors and use fallback message.
-    }
-    throw new Error(message);
-  }
-  const payload = (await response.json()) as { user: UserProfile };
-  return payload.user;
-}
-
 export async function syncGmail(): Promise<{ discovered: number }> {
-  await requireUserId();
+  await requireSession();
   const response = await fetch(`${API_BASE_URL}/gmail/sync`, {
     method: 'POST',
     headers: await buildHeaders(true),
@@ -112,7 +85,7 @@ export async function syncGmail(): Promise<{ discovered: number }> {
 }
 
 export async function listNewsletters(): Promise<NewsletterResponse[]> {
-  await requireUserId();
+  await requireSession();
   const response = await fetch(`${API_BASE_URL}/gmail/newsletters`, {
     headers: await buildHeaders(false),
   });
@@ -127,7 +100,7 @@ export async function updateNewsletterSelection(
   newsletterId: string,
   selected: boolean
 ): Promise<NewsletterResponse> {
-  await requireUserId();
+  await requireSession();
   const response = await fetch(`${API_BASE_URL}/gmail/newsletters/${newsletterId}`, {
     method: 'PATCH',
     headers: await buildHeaders(true),
@@ -141,7 +114,7 @@ export async function updateNewsletterSelection(
 }
 
 export async function listEpisodes(): Promise<EpisodeListItem[]> {
-  await requireUserId();
+  await requireSession();
   const response = await fetch(`${API_BASE_URL}/episodes`, {
     headers: await buildHeaders(false),
   });
@@ -153,7 +126,7 @@ export async function listEpisodes(): Promise<EpisodeListItem[]> {
 }
 
 export async function getEpisode(episodeId: string): Promise<EpisodeDetail> {
-  await requireUserId();
+  await requireSession();
   const response = await fetch(`${API_BASE_URL}/episodes/${episodeId}`, {
     headers: await buildHeaders(false),
   });
@@ -164,7 +137,7 @@ export async function getEpisode(episodeId: string): Promise<EpisodeDetail> {
 }
 
 export async function generateDailyEpisode(voice?: string): Promise<EpisodeDetail | null> {
-  await requireUserId();
+  await requireSession();
   const body = voice ? JSON.stringify({ voice }) : undefined;
   const response = await fetch(`${API_BASE_URL}/episodes/daily`, {
     method: 'POST',
@@ -183,7 +156,7 @@ export async function generateDailyEpisode(voice?: string): Promise<EpisodeDetai
 export async function updateUserPreferences(prefs: {
   podcastDurationMinutes?: number;
 }): Promise<void> {
-  await requireUserId();
+  await requireSession();
   const response = await fetch(`${API_BASE_URL}/users/me`, {
     method: 'PATCH',
     headers: await buildHeaders(true),
@@ -195,7 +168,7 @@ export async function updateUserPreferences(prefs: {
 }
 
 export async function getLatestDailyEpisode(): Promise<EpisodeDetail | null> {
-  await requireUserId();
+  await requireSession();
   const response = await fetch(`${API_BASE_URL}/episodes/daily/latest`, {
     headers: await buildHeaders(false),
   });
@@ -209,7 +182,7 @@ export async function getLatestDailyEpisode(): Promise<EpisodeDetail | null> {
 }
 
 export async function fetchUserProfile(): Promise<UserProfile> {
-  await requireUserId();
+  await requireSession();
   const response = await fetch(`${API_BASE_URL}/users/me`, {
     headers: await buildHeaders(false),
   });

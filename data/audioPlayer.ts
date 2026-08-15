@@ -6,6 +6,8 @@ import {
   type AVPlaybackStatus,
 } from 'expo-av';
 
+import { getAuthHeaders } from '@/data/backend';
+
 const STORAGE_PREFIX = 'newsletterpodcaster.playback.';
 const SAVE_INTERVAL_MS = 2000;
 
@@ -87,7 +89,7 @@ export async function ensureSharedSound(uri: string): Promise<Audio.Sound> {
   loadingUrl = uri;
   sharedLoadPromise = (async () => {
     const { sound } = await Audio.Sound.createAsync(
-      { uri },
+      { uri, headers: await getAuthHeaders() },
       { shouldPlay: false },
       handleStatusUpdate,
       false
@@ -146,7 +148,10 @@ export async function playPreview(uri: string): Promise<void> {
   await configureAudioMode();
   await stopSharedSound();
   await stopPreviewSound();
-  const { sound } = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
+  const { sound } = await Audio.Sound.createAsync(
+    { uri, headers: await getAuthHeaders() },
+    { shouldPlay: true }
+  );
   previewSound = sound;
   sound.setOnPlaybackStatusUpdate((status) => {
     if (!status.isLoaded) {

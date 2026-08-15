@@ -2,12 +2,15 @@ import { google } from "googleapis";
 
 import { env } from "./env.js";
 
-//creates an OAuth2 client instance from the googleapis library
-export const oauthClient = new google.auth.OAuth2(
-  env.GOOGLE_CLIENT_ID,
-  env.GOOGLE_CLIENT_SECRET,
-  env.GOOGLE_REDIRECT_URI
-);
+//creates a fresh OAuth2 client per use — a shared client mutated with
+//setCredentials leaks one user's tokens into another user's requests
+export function createOAuthClient() {
+  return new google.auth.OAuth2(
+    env.GOOGLE_CLIENT_ID,
+    env.GOOGLE_CLIENT_SECRET,
+    env.GOOGLE_REDIRECT_URI
+  );
+}
 
 //permissions the app is requesting during the consent screen.
 export const gmailScopes = [

@@ -3,12 +3,12 @@ import type { Request, Response } from "express";
 import { getUserById, updateUser } from "../db/queries/users.sql.js";
 import { AppError } from "../utils/errors.js";
 
+//the verified user id is set by the requireUser middleware from the session token
 function readUserId(req: Request): string {
-  const userId = req.header("x-user-id") ?? req.query.userId;
-  if (typeof userId !== "string") {
-    throw new AppError("x-user-id header is required.", 400);
+  if (!req.userId) {
+    throw new AppError("Authentication required.", 401);
   }
-  return userId;
+  return req.userId;
 }
 
 export async function updateUserPreferences(req: Request, res: Response) {

@@ -15,7 +15,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Fonts } from '@/constants/theme';
 import { fetchAuthUrl, listNewsletters, syncGmail, updateNewsletterSelection } from '@/data/backend';
 import { PaperLoader } from '@/components/PaperLoader';
-import { getUserId } from '@/data/session';
+import { getAuthToken } from '@/data/session';
 import { usePalette } from '@/hooks/use-palette';
 
 const MAX_NEWSLETTERS_PER_USER = 10;
@@ -48,8 +48,8 @@ export default function NewslettersScreen() {
     setIsLoading(true);
     setStatusMessage(null);
     try {
-      const storedUserId = await getUserId();
-      if (storedUserId) setIsConnected(true);
+      const storedToken = await getAuthToken();
+      if (storedToken) setIsConnected(true);
       const data = await listNewsletters();
       setNewsletters(data);
     } catch (error) {

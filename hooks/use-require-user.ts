@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 
-import { getOnboardingStep, getUserId } from '@/data/session';
+import { getAuthToken, getOnboardingStep } from '@/data/session';
 
 type RequireUserState = {
   hasUser: boolean;
@@ -21,11 +21,11 @@ export function useRequireUser(options?: { allowUserId?: string | null }): Requi
         setIsChecking(false);
         return;
       }
-      const userId = await getUserId();
+      const token = await getAuthToken();
       if (!isActive) {
         return;
       }
-      if (!userId) {
+      if (!token) {
         setHasUser(false);
         router.replace('/onboarding/connect');
         setIsChecking(false);

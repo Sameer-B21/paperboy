@@ -5,13 +5,12 @@ import { enqueueGmailDiscovery, enqueueNewsletterIngest } from "../jobs/workers/
 import { AppError } from "../utils/errors.js";
 import { requireString } from "../utils/validate.js";
 
-//reads user id from request headers or query parameters and returns it
+//the verified user id is set by the requireUser middleware from the session token
 function readUserId(req: Request): string {
-  const userId = req.header("x-user-id") ?? req.query.userId;
-  if (typeof userId !== "string") {
-    throw new AppError("x-user-id header is required.", 400);
+  if (!req.userId) {
+    throw new AppError("Authentication required.", 401);
   }
-  return userId;
+  return req.userId;
 }
 
 //initiates Gmail synchronization for the authenticated user

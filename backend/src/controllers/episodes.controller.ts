@@ -13,27 +13,20 @@ import { AppError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 import { normalizeTtsVoice } from "../utils/tts.js";
 
-function buildEpisodeAudioUrl(episodeId: string, userId: string, cacheKey?: string): string {
+function buildEpisodeAudioUrl(episodeId: string, cacheKey?: string): string {
   const url = new URL(`${env.BASE_URL}/episodes/${episodeId}/audio`);
-  url.searchParams.set("userId", userId);
   if (cacheKey) {
     url.searchParams.set("v", cacheKey);
   }
   return url.toString();
 }
 
-//reads user id from request headers or query parameters and returns it
+//the verified user id is set by the requireUser middleware from the session token
 function readUserId(req: Request): string {
-  const userId =
-    req.header("x-user-id") ??
-    req.query.userId ??
-    req.query.userid ??
-    req.query.userID ??
-    req.query.userld;
-  if (typeof userId !== "string") {
-    throw new AppError("x-user-id header is required.", 400);
+  if (!req.userId) {
+    throw new AppError("Authentication required.", 401);
   }
-  return userId;
+  return req.userId;
 }
 
 //lists episodes for the authenticated user
@@ -58,7 +51,7 @@ export async function getEpisode(req: Request, res: Response) {
   const userId = readUserId(req);
   //get episode from db
   const episode = await getEpisodeById(req.params.episodeId);
-  if (!episode) {
+  if (!episode || episode.userId !== userId) {
     res.status(404).json({ error: "Episode not found." });
     return;
   }
@@ -70,9 +63,7 @@ export async function getEpisode(req: Request, res: Response) {
     script: episode.script,
     status: episode.status,
     voice: episode.voice ?? defaultVoice,
-    audioUrl: episode.audioPath
-      ? buildEpisodeAudioUrl(episode.id, userId, episode.updatedAt)
-      : null,
+    audioUrl: episode.audioPath ? buildEpisodeAudioUrl(episode.id, episode.updatedAt) : null,
     audioDurationSeconds: episode.audioDurationSeconds,
     createdAt: episode.createdAt,
   });
@@ -80,16 +71,17 @@ export async function getEpisode(req: Request, res: Response) {
 
 //streams the audio file for a specific episode
 export async function getEpisodeAudio(req: Request, res: Response) {
-  readUserId(req);
+  const userId = readUserId(req);
   //get ep from db
   const episode = await getEpisodeById(req.params.episodeId);
-  if (!episode || !episode.audioPath) {
+  if (!episode || episode.userId !== userId || !episode.audioPath) {
     res.status(404).json({ error: "Audio not found." });
     return;
   }
   //download audio from storage
   const audio = await downloadAudio(episode.audioPath);
-  res.setHeader("Content-Type", audio.contentType ?? "text/plain; charset=utf-8");
+  res.setHeader("Content-Type", audio.contentType ?? "audio/mpeg");
+  res.setHeader("Cache-Control", "private, max-age=3600");
   res.send(audio.data);
 }
 
@@ -137,9 +129,7 @@ export async function generateDailyEpisode(req: Request, res: Response) {
     script: episode.script,
     status: episode.status,
     voice: episode.voice ?? defaultVoice,
-    audioUrl: episode.audioPath
-      ? buildEpisodeAudioUrl(episode.id, userId, episode.updatedAt)
-      : null,
+    audioUrl: episode.audioPath ? buildEpisodeAudioUrl(episode.id, episode.updatedAt) : null,
     audioDurationSeconds: episode.audioDurationSeconds,
     createdAt: episode.createdAt,
   });
@@ -162,9 +152,7 @@ export async function getLatestDailyEpisode(req: Request, res: Response) {
     script: episode.script,
     status: episode.status,
     voice: episode.voice ?? defaultVoice,
-    audioUrl: episode.audioPath
-      ? buildEpisodeAudioUrl(episode.id, userId, episode.updatedAt)
-      : null,
+    audioUrl: episode.audioPath ? buildEpisodeAudioUrl(episode.id, episode.updatedAt) : null,
     audioDurationSeconds: episode.audioDurationSeconds,
     createdAt: episode.createdAt,
   });

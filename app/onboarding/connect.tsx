@@ -7,17 +7,17 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Fonts } from '@/constants/theme';
 import { fetchAuthUrl } from '@/data/backend';
-import { setOnboardingStep, setUserEmail, setUserId } from '@/data/session';
+import { setAuthToken, setOnboardingStep, setUserEmail } from '@/data/session';
 import { usePalette } from '@/hooks/use-palette';
 
 export default function ConnectScreen() {
   const params = useLocalSearchParams<{
-    userId?: string;
+    token?: string;
     email?: string;
     connected?: string;
     isNew?: string;
   }>();
-  const { userId, email, connected, isNew } = params;
+  const { token, email, connected, isNew } = params;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const palette = usePalette();
@@ -26,10 +26,10 @@ export default function ConnectScreen() {
 
   useEffect(() => {
     const applyParams = async () => {
-      if (!userId || !connected) {
+      if (!token || !connected) {
         return;
       }
-      await setUserId(userId);
+      await setAuthToken(token);
       if (email) {
         await setUserEmail(email);
       }
@@ -42,7 +42,7 @@ export default function ConnectScreen() {
       router.replace('/today');
     };
     void applyParams();
-  }, [userId, email, connected, isNew, router]);
+  }, [token, email, connected, isNew, router]);
 
   const handleConnectPress = async () => {
     setStatusMessage(null);

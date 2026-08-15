@@ -8,11 +8,13 @@ export async function generateAudio(script: string, voice?: string): Promise<Buf
   }
 
   const voiceName = voice?.trim() || "en-US-Chirp3-HD-Leda";
-  const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${env.GOOGLE_TTS_API_KEY}`;
+  //key travels in a header, not the URL — query strings end up in proxy/access logs
+  const url = "https://texttospeech.googleapis.com/v1/text:synthesize";
 
   const response = await fetch(url, {
     method: "POST",
     headers: {
+      "X-Goog-Api-Key": env.GOOGLE_TTS_API_KEY,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({

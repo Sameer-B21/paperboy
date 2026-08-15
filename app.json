@@ -81,7 +81,8 @@
           }
         }
       ],
-      "./plugins/withLiveActivity"
+      "./plugins/withLiveActivity",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,

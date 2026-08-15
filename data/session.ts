@@ -1,22 +1,41 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
-const USER_ID_KEY = 'newsletterpodcaster.userId';
+//SecureStore has no web implementation, so the web build falls back to
+//AsyncStorage (localStorage) for the session token
+const canUseSecureStore = Platform.OS !== 'web';
+
+const AUTH_TOKEN_KEY = 'newsletterpodcaster.authToken';
 const USER_EMAIL_KEY = 'newsletterpodcaster.userEmail';
 const USER_NAME_KEY = 'newsletterpodcaster.userName';
 const TTS_VOICE_KEY = 'newsletterpodcaster.ttsVoice';
 const ONBOARDING_STEP_KEY = 'newsletterpodcaster.onboardingStep';
 const PODCAST_DURATION_KEY = 'newsletterpodcaster.podcastDurationMinutes';
 
-export async function getUserId(): Promise<string | null> {
-  return AsyncStorage.getItem(USER_ID_KEY);
+//the session token is a credential, so it lives in the device keychain
+//(SecureStore) rather than plaintext AsyncStorage
+export async function getAuthToken(): Promise<string | null> {
+  if (!canUseSecureStore) {
+    return AsyncStorage.getItem(AUTH_TOKEN_KEY);
+  }
+  return SecureStore.getItemAsync(AUTH_TOKEN_KEY);
 }
 
-export async function setUserId(userId: string): Promise<void> {
-  await AsyncStorage.setItem(USER_ID_KEY, userId);
+export async function setAuthToken(token: string): Promise<void> {
+  if (!canUseSecureStore) {
+    await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
+    return;
+  }
+  await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
 }
 
-export async function clearUserId(): Promise<void> {
-  await AsyncStorage.removeItem(USER_ID_KEY);
+export async function clearAuthToken(): Promise<void> {
+  if (!canUseSecureStore) {
+    await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+    return;
+  }
+  await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
 }
 
 export async function getUserEmail(): Promise<string | null> {

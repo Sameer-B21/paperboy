@@ -2,7 +2,7 @@ import { Redirect } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { getOnboardingStep, getUserId } from '@/data/session';
+import { getAuthToken, getOnboardingStep } from '@/data/session';
 
 export default function Index() {
   const [target, setTarget] = useState<string | null>(null);
@@ -10,12 +10,12 @@ export default function Index() {
   useEffect(() => {
     let isActive = true;
     void (async () => {
-      const userId = await getUserId();
+      const token = await getAuthToken();
       const onboardingStep = await getOnboardingStep();
       if (!isActive) {
         return;
       }
-      if (!userId) {
+      if (!token) {
         setTarget('/onboarding/connect');
         return;
       }

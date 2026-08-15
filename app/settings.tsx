@@ -13,17 +13,17 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Fonts } from '@/constants/theme';
 import { listNewsletters } from '@/data/backend';
 import {
+  clearAuthToken,
   clearOnboardingStep,
   clearPodcastDurationMinutes,
   clearTtsVoice,
   clearUserEmail,
-  clearUserId,
+  getAuthToken,
   getPodcastDurationMinutes,
   getTtsVoice,
   getUserEmail,
-  getUserId,
+  setAuthToken,
   setUserEmail,
-  setUserId,
 } from '@/data/session';
 import { usePalette } from '@/hooks/use-palette';
 import { useRequireUser } from '@/hooks/use-require-user';
@@ -38,12 +38,12 @@ const voiceLabelByValue: Record<string, string> = {
 };
 
 export default function SettingsScreen() {
-  const params = useLocalSearchParams<{ userId?: string; email?: string; connected?: string }>();
-  const { userId, email, connected } = params;
+  const params = useLocalSearchParams<{ token?: string; email?: string; connected?: string }>();
+  const { token, email, connected } = params;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const palette = usePalette();
-  useRequireUser({ allowUserId: userId });
+  useRequireUser({ allowUserId: token });
 
   const [userEmail, setUserEmailState] = useState('');
   const [ttsVoice, setTtsVoiceState] = useState('en-US-Chirp3-HD-Leda');
@@ -52,16 +52,16 @@ export default function SettingsScreen() {
   const [isConnected, setIsConnected] = useState(false);
 
   const loadSession = useCallback(async () => {
-    const [storedEmail, storedVoice, storedDuration, storedUserId] = await Promise.all([
+    const [storedEmail, storedVoice, storedDuration, storedToken] = await Promise.all([
       getUserEmail(),
       getTtsVoice(),
       getPodcastDurationMinutes(),
-      getUserId(),
+      getAuthToken(),
     ]);
     if (storedEmail) setUserEmailState(storedEmail);
     if (storedVoice) setTtsVoiceState(storedVoice);
     if (storedDuration) setDurationMinutes(storedDuration);
-    if (storedUserId) setIsConnected(true);
+    if (storedToken) setIsConnected(true);
   }, []);
 
   const loadNewsletterCount = useCallback(async () => {
@@ -75,11 +75,11 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     const applyParams = async () => {
-      if (userId) await setUserId(userId);
+      if (token) await setAuthToken(token);
       if (email) await setUserEmail(email);
     };
     void applyParams().then(loadSession).then(loadNewsletterCount);
-  }, [userId, email, connected]);
+  }, [token, email, connected]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,7 +89,7 @@ export default function SettingsScreen() {
   );
 
   const handleLogout = async () => {
-    await clearUserId();
+    await clearAuthToken();
     await clearUserEmail();
     await clearTtsVoice();
     await clearOnboardingStep();
