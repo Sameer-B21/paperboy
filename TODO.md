@@ -42,15 +42,22 @@ Roadmap for getting Paperboy published on the iOS App Store.
 - [x] Settings links: Privacy Policy, Terms, Contact Support (**URLs are placeholders in `constants/links.ts` — replace with real hosted URLs before submission**)
 - [ ] Sign in with Apple: likely exempt (app is a client for one specific service — Gmail); write reviewer notes for App Store Connect; add only if review pushes back
 
-## Part 4 — Deployment
+## Part 4 — Deployment (code ✅ / hosting steps are yours)
 
-- [ ] Host backend on HTTPS (Railway/Render recommended); Supabase stays
-- [ ] Set env vars on host; update `GOOGLE_REDIRECT_URI` (code + Google Cloud Console)
-- [ ] Fix `backend/.env.example` (add `GOOGLE_TTS_API_KEY`; remove dead `OPENAI_TTS_*` vars)
-- [ ] Revoke unused Gemini / ElevenLabs keys in local `backend/.env`
-- [ ] Move episode generation out of the request path (background job + status polling); replace the 7 AM `setInterval` scheduler with host cron
-- [ ] Commit SQL schema/migrations for the 4 Supabase tables
-- [ ] Put production API URL in `eas.json` production profile
+- [x] Episode generation moved out of the request path: `POST /episodes/daily` returns 202 + episode id instantly, work runs in the background, app polls until `completed`/`failed` (verified: 202 in <1s)
+- [x] Host-cron endpoint `POST /internal/cron/daily` (guarded by `CRON_SECRET` header); in-process 7 AM scheduler can be disabled with `ENABLE_SCHEDULER=false`
+- [x] `Dockerfile` + `.dockerignore` in `backend/` (multi-stage, `node:22-alpine`); fixed backend `tsconfig` so `npm run build` actually emits `dist/`
+- [x] Graceful shutdown (SIGTERM/SIGINT) and `/health` now pings Supabase
+- [x] SQL schema committed: `backend/db/schema.sql` (4 tables, FKs with cascade delete, RLS enabled)
+- [x] `eas.json` production profile has the `EXPO_PUBLIC_API_BASE_URL` slot (**placeholder — set the real URL after deploying**)
+- [x] `backend/.env.example` covers all required vars incl. `CRON_SECRET` / `ENABLE_SCHEDULER`
+
+**Manual deploy steps (you):**
+- [ ] Create a Railway or Render service from the repo (`backend/` dir, Dockerfile build); set all env vars from `.env.example` (generate fresh `AUTH_JWT_SECRET` + `CRON_SECRET` for prod; `ENABLE_SCHEDULER=false` if using host cron)
+- [ ] Set `BASE_URL` + `GOOGLE_REDIRECT_URI` to the deployed HTTPS URL; add that redirect URI in Google Cloud Console
+- [ ] Add a host cron job: daily 7 AM → `POST https://<host>/internal/cron/daily` with `x-cron-secret` header
+- [ ] Replace the placeholder URL in `eas.json`
+- [ ] Revoke unused Gemini / ElevenLabs keys sitting in local `backend/.env`
 
 ## Part 5 — External (no code)
 

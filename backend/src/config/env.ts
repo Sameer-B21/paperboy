@@ -23,6 +23,8 @@ export type Env = {
   OPENAI_TTS_PRICE_PER_1M_CHARS?: string;
   FRONTEND_URL?: string;
   GOOGLE_TTS_API_KEY: string;
+  CRON_SECRET?: string;
+  ENABLE_SCHEDULER: boolean;
 };
 
 //function that forcess specific environment variables to exist and returns value
@@ -54,4 +56,7 @@ export const env: Env = {
   OPENAI_TTS_PRICE_PER_1M_CHARS: process.env.OPENAI_TTS_PRICE_PER_1M_CHARS,
   FRONTEND_URL: process.env.FRONTEND_URL,
   GOOGLE_TTS_API_KEY: requireEnv("GOOGLE_TTS_API_KEY"),
+  CRON_SECRET: process.env.CRON_SECRET,
+  //in-process 7 AM scheduler; disable on hosts that trigger /internal/cron/daily instead
+  ENABLE_SCHEDULER: process.env.ENABLE_SCHEDULER !== "false",
 };

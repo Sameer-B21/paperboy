@@ -4,9 +4,14 @@ import {
   getEpisode as getEpisodeById,
   getLatestDailyDigest,
   listEpisodes as listEpisodesByUser,
+  updateEpisode,
 } from "../db/queries/episodes.sql.js";
 import { listNewsletters } from "../db/queries/newsletters.sql.js";
-import { runDailyDigestForUser } from "../jobs/workers/dailyDigest.worker.js";
+import { jobQueue } from "../jobs/queue.js";
+import {
+  prepareDailyDigestEpisode,
+  runDailyDigestForUser,
+} from "../jobs/workers/dailyDigest.worker.js";
 import { ingestNewsletterForUser } from "../services/gmail/gmailSync.js";
 import { downloadAudio } from "../services/storage/uploadAudio.js";
 import { AppError } from "../utils/errors.js";
@@ -85,52 +90,55 @@ export async function getEpisodeAudio(req: Request, res: Response) {
   res.send(audio.data);
 }
 
+//kicks off generation in the background and returns the episode to poll —
+//the full pipeline (Gmail sync + LLM + TTS) takes minutes, far longer than
+//hosting proxies allow a request to stay open
 export async function generateDailyEpisode(req: Request, res: Response) {
   const userId = readUserId(req);
   const requestedVoice = normalizeTtsVoice(req.body?.voice);
   const now = new Date();
 
-  // Force latest sync: Fetch active newsletters and ingest them synchronously
-  // This ensures the database has the latest inbound emails before generating!
-  const newsletters = await listNewsletters(userId);
-  const activeNewsletters = newsletters.filter((n) => n.selected);
-  try {
-    await Promise.all(
-      activeNewsletters.map((sub) => ingestNewsletterForUser(userId, sub.sender))
-    );
-  } catch (error: any) {
-    if (error instanceof AppError && error.status === 401) {
-      logger.warn(`Gmail connection expired for user ${userId} during daily episode ingestion.`);
-    } else {
-      logger.warn(`Failed syncing latest emails for user ${userId}: ${error?.message}`);
+  //create (or reset) today's digest episode so the app has an id to poll
+  const episode = await prepareDailyDigestEpisode(userId, now, requestedVoice);
+
+  jobQueue.add(async () => {
+    // Force latest sync: ingest active newsletters so the digest sees the
+    // latest inbound emails before generating.
+    try {
+      const newsletters = await listNewsletters(userId);
+      const activeNewsletters = newsletters.filter((n) => n.selected);
+      try {
+        await Promise.all(
+          activeNewsletters.map((sub) => ingestNewsletterForUser(userId, sub.sender))
+        );
+      } catch (error: any) {
+        if (error instanceof AppError && error.status === 401) {
+          logger.warn(`Gmail connection expired for user ${userId} during daily episode ingestion.`);
+        } else {
+          logger.warn(`Failed syncing latest emails for user ${userId}: ${error?.message}`);
+        }
+      }
+
+      await runDailyDigestForUser(userId, now, {
+        force: true,
+        voice: requestedVoice,
+      });
+    } catch (error) {
+      logger.error(`Daily episode generation failed for user ${userId}`, { error });
+      await updateEpisode(episode.id, { status: "failed" }).catch(() => undefined);
     }
-  }
-
-  const episodeId = await runDailyDigestForUser(userId, now, {
-    force: true,
-    voice: requestedVoice,
   });
-  if (!episodeId) {
-    res.status(204).send();
-    return;
-  }
-
-  const episode = await getEpisodeById(episodeId);
-  if (!episode) {
-    res.status(404).json({ error: "Episode not found." });
-    return;
-  }
 
   const defaultVoice = env.OPENAI_TTS_VOICE ?? "en-US-Chirp3-HD-Leda";
-  res.json({
+  res.status(202).json({
     id: episode.id,
     subject: episode.subject,
     summary: episode.summary,
     script: episode.script,
     status: episode.status,
     voice: episode.voice ?? defaultVoice,
-    audioUrl: episode.audioPath ? buildEpisodeAudioUrl(episode.id, episode.updatedAt) : null,
-    audioDurationSeconds: episode.audioDurationSeconds,
+    audioUrl: null,
+    audioDurationSeconds: null,
     createdAt: episode.createdAt,
   });
 }

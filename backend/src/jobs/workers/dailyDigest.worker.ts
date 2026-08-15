@@ -23,6 +23,41 @@ function formatDateLabel(date: Date): string {
   });
 }
 
+//creates today's digest episode (or resets the existing one back to "queued")
+//so the app has an episode id to poll while generation runs in the background
+export async function prepareDailyDigestEpisode(
+  userId: string,
+  now = new Date(),
+  voice?: string
+) {
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+  const dayKey = startOfDay.toISOString().slice(0, 10);
+  const digestKey = `digest-${dayKey}`;
+  const dateLabel = formatDateLabel(now);
+  const resolvedVoice = voice?.trim() || env.OPENAI_TTS_VOICE || "en-US-Chirp3-HD-Leda";
+
+  const existing = await getEpisodeBySourceMessageId(userId, digestKey);
+  if (!existing) {
+    return createEpisode({
+      userId,
+      newsletterId: null,
+      subject: `Daily Newsletter Digest - ${dateLabel}`,
+      sourceMessageId: digestKey,
+      body: null,
+      voice: resolvedVoice,
+    });
+  }
+  return updateEpisode(existing.id, {
+    summary: null,
+    script: null,
+    audioPath: null,
+    audioDurationSeconds: null,
+    status: "queued",
+    voice: resolvedVoice,
+  });
+}
+
 //function to run daily digest for a single user
 export async function runDailyDigestForUser(
   userId: string,
@@ -83,6 +118,7 @@ export async function runDailyDigestForUser(
         "Sync your inbox and try again later.",
       audioPath: null,
       audioDurationSeconds: null,
+      status: "completed",
       voice: resolvedVoice,
     });
     return digestEpisode.id;
@@ -136,6 +172,7 @@ export async function runDailyDigestForUser(
         "Sync your inbox and try again later.",
       audioPath: null,
       audioDurationSeconds: null,
+      status: "completed",
       voice: resolvedVoice,
     });
     return digestEpisode.id;
@@ -176,9 +213,10 @@ export async function runDailyDigestForUser(
     const audioBuffer = await generateAudio(script, resolvedVoice);
     const audioDurationSeconds = await getAudioDurationSeconds(audioBuffer);
     const audioPath = await uploadAudio(digestEpisode.id, audioBuffer);
-    await updateEpisode(digestEpisode.id, { audioPath, audioDurationSeconds });
+    await updateEpisode(digestEpisode.id, { audioPath, audioDurationSeconds, status: "completed" });
   } catch (error) {
     logger.error("Daily digest failed", { error });
+    await updateEpisode(digestEpisode.id, { status: "failed" }).catch(() => undefined);
   }
 
   return digestEpisode.id;

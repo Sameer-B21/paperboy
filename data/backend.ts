@@ -136,6 +136,25 @@ export async function getEpisode(episodeId: string): Promise<EpisodeDetail> {
   return (await response.json()) as EpisodeDetail;
 }
 
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+//generation runs in the background on the server; poll the episode until it
+//reaches a terminal status
+async function pollEpisodeUntilReady(episodeId: string): Promise<EpisodeDetail> {
+  const deadline = Date.now() + 6 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await sleep(4000);
+    const episode = await getEpisode(episodeId);
+    if (episode.status === 'failed') {
+      throw new Error('Unable to generate daily brief. Please try again.');
+    }
+    if (episode.status === 'completed') {
+      return episode;
+    }
+  }
+  throw new Error('Brief generation timed out. Please try again.');
+}
+
 export async function generateDailyEpisode(voice?: string): Promise<EpisodeDetail | null> {
   await requireSession();
   const body = voice ? JSON.stringify({ voice }) : undefined;
@@ -150,7 +169,11 @@ export async function generateDailyEpisode(voice?: string): Promise<EpisodeDetai
   if (!response.ok) {
     throw new Error('Unable to generate daily brief.');
   }
-  return (await response.json()) as EpisodeDetail;
+  const payload = (await response.json()) as EpisodeDetail;
+  if (response.status === 202) {
+    return pollEpisodeUntilReady(payload.id);
+  }
+  return payload;
 }
 
 export async function updateUserPreferences(prefs: {
