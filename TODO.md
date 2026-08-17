@@ -31,7 +31,7 @@ Roadmap for getting Paperboy published on the iOS App Store.
 - [x] Move `GOOGLE_TTS_API_KEY` to the `X-Goog-Api-Key` header
 - [x] Restore input truncation in `chatgptDigest.ts` (12k chars)
 - [x] `AUTH_JWT_SECRET` added to `backend/.env` (generated) and `.env.example`; `.env.example` also fixed (added `GOOGLE_TTS_API_KEY`, removed dead `OPENAI_TTS_*`)
-- [ ] Verify Supabase audio bucket is private — **manual check in the Supabase dashboard** (Storage → audio bucket → must not be "Public")
+- [x] Verify Supabase audio bucket is private (checked in the Supabase dashboard — not public)
 
 > Note: existing installs must sign in again (old sessions used the removed user-id model).
 
@@ -45,7 +45,9 @@ Roadmap for getting Paperboy published on the iOS App Store.
 ## Part 4 — Deployment (code ✅ / hosting steps are yours)
 
 - [x] Episode generation moved out of the request path: `POST /episodes/daily` returns 202 + episode id instantly, work runs in the background, app polls until `completed`/`failed` (verified: 202 in <1s)
-- [x] Host-cron endpoint `POST /internal/cron/daily` (guarded by `CRON_SECRET` header); in-process 7 AM scheduler can be disabled with `ENABLE_SCHEDULER=false`
+- [x] Host-cron endpoint `POST /internal/cron/daily` (guarded by `CRON_SECRET` header); in-process scheduler can be disabled with `ENABLE_SCHEDULER=false` (a host cron must then fire **hourly**)
+- [x] **User-chosen delivery time**: `users.digest_utc_hour` column; "Delivery Time" picker in settings; the app converts the chosen local hour to UTC so the server never stores timezones. Scheduler now runs hourly and generates only for users whose hour arrived (no pick yet → 7 AM server time)
+- [x] Wrapped all async route handlers in `asyncHandler` — on Express 4 a rejected promise was crashing the process instead of returning 500
 - [x] `Dockerfile` + `.dockerignore` in `backend/` (multi-stage, `node:22-alpine`); fixed backend `tsconfig` so `npm run build` actually emits `dist/`
 - [x] Graceful shutdown (SIGTERM/SIGINT) and `/health` now pings Supabase
 - [x] SQL schema committed: `backend/db/schema.sql` (4 tables, FKs with cascade delete, RLS enabled)

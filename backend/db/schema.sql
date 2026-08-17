@@ -13,6 +13,8 @@ create table if not exists users (
   email text not null unique,
   name text,
   podcast_duration_minutes integer,
+  -- Hour of day (UTC, 0-23) the user wants their daily digest; null = server default
+  digest_utc_hour integer,
   created_at timestamptz not null default now()
 );
 

@@ -5,11 +5,12 @@ import {
   syncGmail,
   updateNewsletter,
 } from "../controllers/gmail.controller.js";
+import { asyncHandler } from "../utils/errors.js";
 
 export const gmailRouter = Router();
 
 //gmail routes
 
-gmailRouter.post("/sync", syncGmail);
-gmailRouter.get("/newsletters", listUserNewsletters);
-gmailRouter.patch("/newsletters/:newsletterId", updateNewsletter);
+gmailRouter.post("/sync", asyncHandler(syncGmail));
+gmailRouter.get("/newsletters", asyncHandler(listUserNewsletters));
+gmailRouter.patch("/newsletters/:newsletterId", asyncHandler(updateNewsletter));

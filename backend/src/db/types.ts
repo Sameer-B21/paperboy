@@ -3,6 +3,7 @@ export type User = {
   email: string;
   name: string | null;
   podcastDurationMinutes: number | null;
+  digestUtcHour: number | null;
   createdAt: string;
 };
 

@@ -8,6 +8,7 @@ import {
   getLatestDailyEpisode,
   listEpisodes,
 } from "../controllers/episodes.controller.js";
+import { asyncHandler } from "../utils/errors.js";
 
 export const episodesRouter = Router();
 
@@ -24,8 +25,8 @@ const generationLimiter = rateLimit({
 
 //episode routes
 
-episodesRouter.get("/", listEpisodes);
-episodesRouter.post("/daily", generationLimiter, generateDailyEpisode);
-episodesRouter.get("/daily/latest", getLatestDailyEpisode);
-episodesRouter.get("/:episodeId", getEpisode);
-episodesRouter.get("/:episodeId/audio", getEpisodeAudio);
+episodesRouter.get("/", asyncHandler(listEpisodes));
+episodesRouter.post("/daily", generationLimiter, asyncHandler(generateDailyEpisode));
+episodesRouter.get("/daily/latest", asyncHandler(getLatestDailyEpisode));
+episodesRouter.get("/:episodeId", asyncHandler(getEpisode));
+episodesRouter.get("/:episodeId/audio", asyncHandler(getEpisodeAudio));

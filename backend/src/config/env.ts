@@ -57,6 +57,6 @@ export const env: Env = {
   FRONTEND_URL: process.env.FRONTEND_URL,
   GOOGLE_TTS_API_KEY: requireEnv("GOOGLE_TTS_API_KEY"),
   CRON_SECRET: process.env.CRON_SECRET,
-  //in-process 7 AM scheduler; disable on hosts that trigger /internal/cron/daily instead
+  //in-process scheduler (per-user delivery hours); disable on hosts that trigger /internal/cron/daily hourly instead
   ENABLE_SCHEDULER: process.env.ENABLE_SCHEDULER !== "false",
 };

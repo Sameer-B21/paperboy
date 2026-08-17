@@ -6,11 +6,12 @@ import {
   logout,
 } from "../controllers/auth.controller.js";
 import { requireUser } from "../middleware/requireUser.js";
+import { asyncHandler } from "../utils/errors.js";
 
 export const authRouter = Router();
 
 //google auth routes
 
-authRouter.get("/google", getGoogleAuthUrl);
-authRouter.get("/google/callback", handleGoogleCallback);
-authRouter.post("/logout", requireUser, logout);
+authRouter.get("/google", asyncHandler(getGoogleAuthUrl));
+authRouter.get("/google/callback", asyncHandler(handleGoogleCallback));
+authRouter.post("/logout", requireUser, asyncHandler(logout));

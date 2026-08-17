@@ -6,9 +6,30 @@ import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Fonts } from '@/constants/theme';
-import { fetchAuthUrl } from '@/data/backend';
-import { setAuthToken, setOnboardingStep, setUserEmail } from '@/data/session';
+import { fetchAuthUrl, fetchUserProfile, updateUserPreferences } from '@/data/backend';
+import {
+  DEFAULT_DELIVERY_HOUR,
+  localHourToUtcHour,
+  utcHourToLocalHour,
+} from '@/data/deliveryTime';
+import { setAuthToken, setDeliveryHour, setOnboardingStep, setUserEmail } from '@/data/session';
 import { usePalette } from '@/hooks/use-palette';
+
+//makes sure the account has a delivery time: existing accounts sync theirs
+//down for display, accounts without one get the 7 AM local default
+async function syncDeliveryHour(): Promise<void> {
+  try {
+    const profile = await fetchUserProfile();
+    if (profile.digestUtcHour === null) {
+      await setDeliveryHour(DEFAULT_DELIVERY_HOUR.toString());
+      await updateUserPreferences({ digestUtcHour: localHourToUtcHour(DEFAULT_DELIVERY_HOUR) });
+    } else {
+      await setDeliveryHour(utcHourToLocalHour(profile.digestUtcHour).toString());
+    }
+  } catch {
+    // best effort — the server falls back to a default delivery time
+  }
+}
 
 export default function ConnectScreen() {
   const params = useLocalSearchParams<{
@@ -33,6 +54,7 @@ export default function ConnectScreen() {
       if (email) {
         await setUserEmail(email);
       }
+      void syncDeliveryHour();
       if (isNew === '1') {
         await setOnboardingStep('newsletters');
         router.replace('/onboarding/newsletters');

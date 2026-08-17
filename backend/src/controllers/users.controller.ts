@@ -14,14 +14,26 @@ function readUserId(req: Request): string {
 
 export async function updateUserPreferences(req: Request, res: Response) {
   const userId = readUserId(req);
-  const { podcastDurationMinutes } = req.body ?? {};
+  const { podcastDurationMinutes, digestUtcHour } = req.body ?? {};
+  const updates: { podcastDurationMinutes?: number; digestUtcHour?: number } = {};
   if (podcastDurationMinutes !== undefined) {
     const parsed = Number(podcastDurationMinutes);
     if (!Number.isFinite(parsed) || parsed < 1 || parsed > 60) {
       res.status(400).json({ error: "podcastDurationMinutes must be a number between 1 and 60." });
       return;
     }
-    await updateUser(userId, { podcastDurationMinutes: parsed });
+    updates.podcastDurationMinutes = parsed;
+  }
+  if (digestUtcHour !== undefined) {
+    const parsed = Number(digestUtcHour);
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 23) {
+      res.status(400).json({ error: "digestUtcHour must be an integer between 0 and 23." });
+      return;
+    }
+    updates.digestUtcHour = parsed;
+  }
+  if (Object.keys(updates).length > 0) {
+    await updateUser(userId, updates);
   }
   res.json({ ok: true });
 }

@@ -6,7 +6,7 @@ import helmet from "helmet";
 import { env } from "./config/env.js";
 import { supabase } from "./config/supabase.js";
 import { jobQueue } from "./jobs/queue.js";
-import { runDailyDigestForAllUsers } from "./jobs/workers/dailyDigest.worker.js";
+import { runDailyDigestForDueUsers } from "./jobs/workers/dailyDigest.worker.js";
 import { requireUser } from "./middleware/requireUser.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { episodesRouter } from "./routes/episodes.routes.js";
@@ -14,7 +14,7 @@ import { gmailRouter } from "./routes/gmail.routes.js";
 import { ttsRouter } from "./routes/tts.routes.js";
 import { usersRouter } from "./routes/users.routes.js";
 import { webhooksRouter } from "./routes/webhooks.routes.js";
-import { AppError, toErrorMessage } from "./utils/errors.js";
+import { AppError, asyncHandler, toErrorMessage } from "./utils/errors.js";
 
 // Create and configure the Express application.
 export function createApp() {
@@ -41,23 +41,24 @@ export function createApp() {
   );
 
   // Health check endpoint — verifies the database is reachable too
-  app.get("/health", async (_req, res) => {
+  app.get("/health", asyncHandler(async (_req, res) => {
     const { error } = await supabase.from("users").select("id").limit(1);
     if (error) {
       res.status(503).json({ status: "degraded", database: "unreachable" });
       return;
     }
     res.json({ status: "ok" });
-  });
+  }));
 
-  // Host-cron trigger for the daily digest (e.g. Railway/Render cron hitting
-  // this URL at 7 AM). Requires CRON_SECRET to be configured and matched.
+  // Host-cron trigger for the daily digest. Delivery times are per-user now,
+  // so a host cron must hit this URL HOURLY; each call generates digests only
+  // for users whose chosen hour arrived. Requires CRON_SECRET to be matched.
   app.post("/internal/cron/daily", (req, res) => {
     if (!env.CRON_SECRET || req.header("x-cron-secret") !== env.CRON_SECRET) {
       res.status(401).json({ error: "Unauthorized." });
       return;
     }
-    jobQueue.add(() => runDailyDigestForAllUsers(new Date()));
+    jobQueue.add(() => runDailyDigestForDueUsers(new Date()));
     res.status(202).json({ status: "queued" });
   });
 

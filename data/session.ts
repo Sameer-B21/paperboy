@@ -12,6 +12,7 @@ const USER_NAME_KEY = 'newsletterpodcaster.userName';
 const TTS_VOICE_KEY = 'newsletterpodcaster.ttsVoice';
 const ONBOARDING_STEP_KEY = 'newsletterpodcaster.onboardingStep';
 const PODCAST_DURATION_KEY = 'newsletterpodcaster.podcastDurationMinutes';
+const DELIVERY_HOUR_KEY = 'newsletterpodcaster.deliveryHour';
 
 //the session token is a credential, so it lives in the device keychain
 //(SecureStore) rather than plaintext AsyncStorage
@@ -98,4 +99,17 @@ export async function setPodcastDurationMinutes(minutes: string): Promise<void> 
 
 export async function clearPodcastDurationMinutes(): Promise<void> {
   await AsyncStorage.removeItem(PODCAST_DURATION_KEY);
+}
+
+//local hour (0-23) the user wants their daily episode, stored for display
+export async function getDeliveryHour(): Promise<string | null> {
+  return AsyncStorage.getItem(DELIVERY_HOUR_KEY);
+}
+
+export async function setDeliveryHour(hour: string): Promise<void> {
+  await AsyncStorage.setItem(DELIVERY_HOUR_KEY, hour);
+}
+
+export async function clearDeliveryHour(): Promise<void> {
+  await AsyncStorage.removeItem(DELIVERY_HOUR_KEY);
 }

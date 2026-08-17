@@ -1,20 +1,20 @@
 import { logger } from "../utils/logger.js";
-import { runDailyDigestForAllUsers } from "./workers/dailyDigest.worker.js";
+import { runDailyDigestForDueUsers } from "./workers/dailyDigest.worker.js";
 
-let lastRunKey: string | null = null;
-//checks every minute if it's 7 AM to run daily digest for all users
+let lastRunHourKey: string | null = null;
+//once per hour, generates digests for users whose chosen delivery hour arrived.
+//fires on the first tick inside each hour (not exactly :00) so a restart just
+//before the hour can't skip a day; the worker's "digest already exists" check
+//keeps a same-hour restart from generating twice.
 async function tick() {
   const now = new Date();
-  if (now.getHours() !== 7 || now.getMinutes() !== 0) {
+  const hourKey = now.toISOString().slice(0, 13);
+  if (lastRunHourKey === hourKey) {
     return;
   }
-  const dayKey = now.toISOString().slice(0, 10);
-  if (lastRunKey === dayKey) {
-    return;
-  }
-  lastRunKey = dayKey;
+  lastRunHourKey = hourKey;
   try {
-    await runDailyDigestForAllUsers(now);
+    await runDailyDigestForDueUsers(now);
   } catch (error) {
     logger.error("Daily digest scheduler failed", { error });
   }

@@ -35,6 +35,7 @@ type UserProfile = {
   id: string;
   email: string;
   name: string | null;
+  digestUtcHour: number | null;
   createdAt: string;
 };
 
@@ -178,6 +179,7 @@ export async function generateDailyEpisode(voice?: string): Promise<EpisodeDetai
 
 export async function updateUserPreferences(prefs: {
   podcastDurationMinutes?: number;
+  digestUtcHour?: number;
 }): Promise<void> {
   await requireSession();
   const response = await fetch(`${API_BASE_URL}/users/me`, {

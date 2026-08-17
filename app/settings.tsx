@@ -16,13 +16,16 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PRIVACY_POLICY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/constants/links';
 import { Fonts } from '@/constants/theme';
 import { deleteAccount, listNewsletters, logoutOnServer } from '@/data/backend';
+import { DEFAULT_DELIVERY_HOUR, formatHourLabel } from '@/data/deliveryTime';
 import {
   clearAuthToken,
+  clearDeliveryHour,
   clearOnboardingStep,
   clearPodcastDurationMinutes,
   clearTtsVoice,
   clearUserEmail,
   getAuthToken,
+  getDeliveryHour,
   getPodcastDurationMinutes,
   getTtsVoice,
   getUserEmail,
@@ -52,19 +55,26 @@ export default function SettingsScreen() {
   const [userEmail, setUserEmailState] = useState('');
   const [ttsVoice, setTtsVoiceState] = useState('en-US-Chirp3-HD-Leda');
   const [durationMinutes, setDurationMinutes] = useState('8');
+  const [deliveryHour, setDeliveryHourState] = useState(DEFAULT_DELIVERY_HOUR);
   const [activeNewsletterCount, setActiveNewsletterCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
 
   const loadSession = useCallback(async () => {
-    const [storedEmail, storedVoice, storedDuration, storedToken] = await Promise.all([
-      getUserEmail(),
-      getTtsVoice(),
-      getPodcastDurationMinutes(),
-      getAuthToken(),
-    ]);
+    const [storedEmail, storedVoice, storedDuration, storedDeliveryHour, storedToken] =
+      await Promise.all([
+        getUserEmail(),
+        getTtsVoice(),
+        getPodcastDurationMinutes(),
+        getDeliveryHour(),
+        getAuthToken(),
+      ]);
     if (storedEmail) setUserEmailState(storedEmail);
     if (storedVoice) setTtsVoiceState(storedVoice);
     if (storedDuration) setDurationMinutes(storedDuration);
+    if (storedDeliveryHour !== null) {
+      const parsed = Number.parseInt(storedDeliveryHour, 10);
+      if (Number.isInteger(parsed) && parsed >= 0 && parsed <= 23) setDeliveryHourState(parsed);
+    }
     if (storedToken) setIsConnected(true);
   }, []);
 
@@ -98,6 +108,7 @@ export default function SettingsScreen() {
     await clearTtsVoice();
     await clearOnboardingStep();
     await clearPodcastDurationMinutes();
+    await clearDeliveryHour();
   };
 
   const handleLogout = async () => {
@@ -344,6 +355,23 @@ export default function SettingsScreen() {
             <View style={styles.rowContent}>
               <Text style={styles.rowTitle}>Delivery Length</Text>
               <Text style={styles.rowSubtitle}>{durationLabel}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => router.push('/delivery-time')}
+          >
+            <View style={styles.iconBubble}>
+              <Ionicons name="alarm-outline" size={18} color={palette.icon} />
+            </View>
+            <View style={styles.rowContent}>
+              <Text style={styles.rowTitle}>Delivery Time</Text>
+              <Text style={styles.rowSubtitle}>{formatHourLabel(deliveryHour)}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={palette.secondaryText} />
           </TouchableOpacity>

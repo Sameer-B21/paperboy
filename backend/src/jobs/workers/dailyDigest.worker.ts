@@ -7,6 +7,7 @@ import {
 } from "../../db/queries/episodes.sql.js";
 import { listNewsletters } from "../../db/queries/newsletters.sql.js";
 import { getUserById, listUsers } from "../../db/queries/users.sql.js";
+import { ingestNewsletterForUser } from "../../services/gmail/gmailSync.js";
 import { uploadAudio } from "../../services/storage/uploadAudio.js";
 import { buildDailyDigestScript } from "../../services/summarize/chatgptDigest.js";
 import { generateAudio } from "../../services/tts/generateAudio.js";
@@ -222,14 +223,43 @@ export async function runDailyDigestForUser(
   return digestEpisode.id;
 }
 
-//function to run daily digest for all users
-export async function runDailyDigestForAllUsers(now = new Date()): Promise<void> {
-  const users = await listUsers();
-  if (users.length === 0) {
-    return;
+//pulls in the latest emails from the user's active newsletters, the same way
+//the "generate now" button does, so the scheduled digest isn't built from an
+//empty inbox
+async function ingestActiveNewsletters(userId: string): Promise<void> {
+  try {
+    const newsletters = await listNewsletters(userId);
+    const active = newsletters.filter((newsletter) => newsletter.selected);
+    await Promise.all(active.map((newsletter) => ingestNewsletterForUser(userId, newsletter.sender)));
+  } catch (error) {
+    logger.warn(`Failed syncing latest emails for user ${userId} before scheduled digest`, { error });
   }
+}
 
-  for (const user of users) {
-    await runDailyDigestForUser(user.id, now);
+//runs the daily digest for every user whose chosen delivery hour is now.
+//users who never picked a time (digestUtcHour null) fall back to 7 AM server time.
+export async function runDailyDigestForDueUsers(now = new Date()): Promise<void> {
+  const users = await listUsers();
+  const utcHour = now.getUTCHours();
+  const serverHour = now.getHours();
+  const dueUsers = users.filter((user) =>
+    user.digestUtcHour != null ? user.digestUtcHour === utcHour : serverHour === 7
+  );
+
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+  const digestKey = `digest-${startOfDay.toISOString().slice(0, 10)}`;
+
+  for (const user of dueUsers) {
+    //today's digest already exists, so a restart during the delivery hour
+    //can't run up a second round of OpenAI + TTS charges
+    const existing = await getEpisodeBySourceMessageId(user.id, digestKey);
+    if (existing) {
+      continue;
+    }
+    await ingestActiveNewsletters(user.id);
+    //force: the delivery hour is rarely the end of the day, so the digest
+    //covers the last 24 hours rather than only what arrived since midnight
+    await runDailyDigestForUser(user.id, now, { force: true });
   }
 }

@@ -7,6 +7,7 @@ type UserRow = {
   email: string;
   name: string | null;
   podcast_duration_minutes: number | null;
+  digest_utc_hour: number | null;
   created_at: string;
 };
 
@@ -17,6 +18,7 @@ function toUser(row: UserRow): User {
     email: row.email,
     name: row.name,
     podcastDurationMinutes: row.podcast_duration_minutes,
+    digestUtcHour: row.digest_utc_hour,
     createdAt: row.created_at,
   };
 }
@@ -67,11 +69,14 @@ export async function getOrCreateUserByEmail(
 // Updates user preferences
 export async function updateUser(
   userId: string,
-  updates: { podcastDurationMinutes?: number }
+  updates: { podcastDurationMinutes?: number; digestUtcHour?: number }
 ): Promise<User> {
   const payload: Record<string, unknown> = {};
   if (updates.podcastDurationMinutes !== undefined) {
     payload.podcast_duration_minutes = updates.podcastDurationMinutes;
+  }
+  if (updates.digestUtcHour !== undefined) {
+    payload.digest_utc_hour = updates.digestUtcHour;
   }
   const { data, error } = await supabase
     .from("users")
