@@ -72,3 +72,8 @@ Roadmap for getting Paperboy published on the iOS App Store.
 - [ ] `eas.json` submit config (`appleId`, `ascAppId`, `appleTeamId`)
 - [ ] TestFlight beta pass end-to-end
 - [ ] Submit for review
+
+## Potential Upgrades (post-launch, not blocking)
+
+- [ ] **80+ language support**: currently English-only (8 curated Google Chirp3-HD/Journey voices, `en-US`). Letting users pick a digest language would need voice selection, prompt/summarization changes for non-English newsletters, and locale-aware UI copy.
+- [ ] **Fish Audio as an additional/opt-in TTS provider**: ~2x cheaper than Google Chirp3-HD (~$15/1M bytes vs. ~$30/1M chars) and offers zero-shot voice cloning (10s sample) as a differentiated feature (e.g. "narrate in your own voice"). Not a replacement for Google TTS — Fish Audio is operated by a China-based company, so routing Gmail-derived content through it needs new privacy-policy disclosures and could complicate the in-flight Google OAuth verification / CASA Tier 2 assessment (Part 5). Revisit only after that verification is done, as an additive premium voice option, not a swap.
