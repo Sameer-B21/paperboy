@@ -16,11 +16,9 @@ export type Env = {
   GOOGLE_REDIRECT_URI: string;
   TOKEN_ENCRYPTION_KEY: string;
   AUTH_JWT_SECRET: string;
-  OPENAI_API_KEY: string;
-  OPENAI_MODEL?: string;
-  OPENAI_TTS_MODEL?: string;
-  OPENAI_TTS_VOICE?: string;
-  OPENAI_TTS_PRICE_PER_1M_CHARS?: string;
+  GEMINI_API_KEY: string;
+  GEMINI_MODEL?: string;
+  TTS_VOICE?: string;
   FRONTEND_URL?: string;
   GOOGLE_TTS_API_KEY: string;
   CRON_SECRET?: string;
@@ -49,11 +47,9 @@ export const env: Env = {
   GOOGLE_REDIRECT_URI: requireEnv("GOOGLE_REDIRECT_URI"),
   TOKEN_ENCRYPTION_KEY: requireEnv("TOKEN_ENCRYPTION_KEY"),
   AUTH_JWT_SECRET: requireEnv("AUTH_JWT_SECRET"),
-  OPENAI_API_KEY: requireEnv("OPENAI_API_KEY"),
-  OPENAI_MODEL: process.env.OPENAI_MODEL,
-  OPENAI_TTS_MODEL: process.env.OPENAI_TTS_MODEL,
-  OPENAI_TTS_VOICE: process.env.OPENAI_TTS_VOICE,
-  OPENAI_TTS_PRICE_PER_1M_CHARS: process.env.OPENAI_TTS_PRICE_PER_1M_CHARS,
+  GEMINI_API_KEY: requireEnv("GEMINI_API_KEY"),
+  GEMINI_MODEL: process.env.GEMINI_MODEL,
+  TTS_VOICE: process.env.TTS_VOICE,
   FRONTEND_URL: process.env.FRONTEND_URL,
   GOOGLE_TTS_API_KEY: requireEnv("GOOGLE_TTS_API_KEY"),
   CRON_SECRET: process.env.CRON_SECRET,

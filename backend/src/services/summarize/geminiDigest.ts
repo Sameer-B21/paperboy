@@ -1,0 +1,230 @@
+import { env } from "../../config/env.js";
+
+export type DigestItem = {
+  subject: string;
+  body: string;
+};
+
+type UsageMetadata = {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  totalTokenCount?: number;
+};
+
+type ModelPricing = {
+  inputPer1MTokens: number;
+  outputPer1MTokens: number;
+};
+
+const MODEL_PRICING: Record<string, ModelPricing> = {
+  // Intro pricing through 2026; doubles Jan 1 2027
+  "gemini-3.7-flash": { inputPer1MTokens: 0.75, outputPer1MTokens: 3.75 },
+  "gemini-2.5-flash-lite": { inputPer1MTokens: 0.1, outputPer1MTokens: 0.4 },
+};
+
+const DEFAULT_MODEL = "gemini-flash-latest";
+
+function formatUsageCost(model: string, usage?: UsageMetadata): string {
+  if (!usage) {
+    return "tokens unknown; cost unknown";
+  }
+  const promptTokens = usage.promptTokenCount ?? 0;
+  const completionTokens = usage.candidatesTokenCount ?? 0;
+  const totalTokens = usage.totalTokenCount ?? promptTokens + completionTokens;
+  const pricing = MODEL_PRICING[model];
+  if (!pricing) {
+    return `tokens ${promptTokens}/${completionTokens}/${totalTokens}; cost unknown for model ${model}`;
+  }
+  const cost =
+    (promptTokens / 1_000_000) * pricing.inputPer1MTokens +
+    (completionTokens / 1_000_000) * pricing.outputPer1MTokens;
+  return `tokens ${promptTokens}/${completionTokens}/${totalTokens}; estimated cost $${cost.toFixed(6)}`;
+}
+
+// Truncate input text to a maximum number of characters, adding a notice if truncated.
+function truncateInput(text: string, maxChars: number): string {
+  if (text.length <= maxChars) {
+    return text;
+  }
+  return `${text.slice(0, maxChars)}\n\n[Truncated for length]`;
+}
+
+function cleanNewsletterText(text: string): string {
+  const dropLinePatterns = [
+    /^\s*(unsubscribe|manage preferences|update your preferences)\b/i,
+    /^\s*(view (?:this email|in browser)|view in browser)\b/i,
+    /^\s*(privacy policy|terms of service)\b/i,
+    /^\s*(forward to a friend|share|tweet|follow us)\b/i,
+    /^\s*copyright\b/i,
+  ];
+
+  const cleaned = text
+    .replace(/\r\n/g, "\n")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1")
+    .replace(/\bhttps?:\/\/\S+/gi, "")
+    .replace(/\bwww\.\S+/gi, "")
+    .replace(/\b[\w.+-]+@[\w-]+\.[\w.-]+\b/g, "");
+
+  return cleaned
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .filter((line) => !dropLinePatterns.some((pattern) => pattern.test(line)))
+    .join("\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+// Extract JSON object with "summary" and "script" from content string.
+function extractJson(content: string): { summary: string; script: string } | null {
+  try {
+    // Try parsing the entire content as JSON first
+    const parsed = JSON.parse(content) as { summary?: string; script?: string };
+    if (parsed.summary && parsed.script) {
+      return { summary: parsed.summary, script: parsed.script };
+    }
+  } catch {
+    // fall through to regex extraction
+    //----------------------------------------
+  }
+
+  // Use regex to find JSON object within the content
+  const match = content.match(/\{[\s\S]*\}/);
+  if (!match) {
+    return null;
+  }
+  try {
+    // Try parsing the matched JSON string
+    const parsed = JSON.parse(match[0]) as { summary?: string; script?: string };
+    if (parsed.summary && parsed.script) {
+      return { summary: parsed.summary, script: parsed.script };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+// Build a daily digest podcast script using the Gemini API.
+export async function buildDailyDigestScript(payload: {
+  dateLabel: string;
+  items: DigestItem[];
+  durationMinutes?: number;
+  userName?: string;
+}): Promise<{ summary: string; script: string }> {
+  if (!env.GEMINI_API_KEY) {
+    throw new Error("Missing GEMINI_API_KEY.");
+  }
+
+  // Combine all newsletter items into a single input string.
+  const combined = payload.items
+    .map((item, index) => {
+      const cleanedBody = cleanNewsletterText(item.body);
+      return `Newsletter ${index + 1}: ${item.subject}\n${cleanedBody}`;
+    })
+    .join("\n\n");
+
+  //truncate message so a large inbox can't blow past the context window (or the bill)
+  const input = truncateInput(combined, 12000);
+
+  const model = env.GEMINI_MODEL ?? DEFAULT_MODEL;
+
+  // Call the Gemini generateContent API
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    {
+      method: "POST",
+      headers: {
+        "x-goog-api-key": env.GEMINI_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [
+            {
+              text: "You are a podcast producer. Summarize multiple newsletters into a concise daily briefing.",
+            },
+          ],
+        },
+        generationConfig: {
+          temperature: 0.4,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              summary: { type: "STRING" },
+              script: { type: "STRING" },
+            },
+            required: ["summary", "script"],
+            propertyOrdering: ["summary", "script"],
+          },
+        },
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text:
+                  `Create a daily podcast script for ${payload.dateLabel}. ` +
+
+                  `Turn the newsletters below into a smart, casual, Morning Brew–style audio briefing that replaces reading them.`+
+
+                  `Requirements:
+                  Cover all important content; ignore ads/promotions
+                  If topics overlap, address once
+                  Use a single-host, conversational voice, optimized for audio`+
+
+                  `Structure:
+                  1–2 sentence opening overview. Greet the listener by name ("Good morning, ${payload.userName ?? 'there'}" or similar).
+                  Segments introduced with: "Moving on to {Newsletter Name}…"
+                  End with "One Thing to Remember Today" and a short reflection`+
+
+                  `Length Constraints (CRITICAL): Check your internal word count carefully. The target duration is exactly ${payload.durationMinutes ?? 8} minutes (~150 words per minute, so aim for ${(payload.durationMinutes ?? 8) * 150} words). ` +
+                  `If the provided newsletters are too short, you MUST creatively expand on the analysis and implications of the news to reach this length. If they are too long, limit yourself strictly to the word count by aggressively summarizing. ` +
+
+                  `Return a JSON object with two keys: "summary" (2-4 sentences) and "script" (the full podcast script meeting the length constraints). ` +
+                  `Newsletters:\n\n` +
+                  input,
+              },
+            ],
+          },
+        ],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini request failed: ${response.status} ${errorText}`);
+  }
+
+  // Parse Gemini response
+  const data = (await response.json()) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    usageMetadata?: UsageMetadata;
+    modelVersion?: string;
+  };
+  const reportedModel = data.modelVersion ?? model;
+  console.log(`Gemini usage (${reportedModel}): ${formatUsageCost(reportedModel, data.usageMetadata)}`);
+
+  // Extract content from the response (joining parts in case the model splits them)
+  const content = data.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text ?? "")
+    .join("")
+    .trim();
+  if (!content) {
+    throw new Error("Gemini response missing content.");
+  }
+
+  // Try to extract JSON from the content
+  const parsed = extractJson(content);
+  if (parsed) {
+    return parsed;
+  }
+
+  return {
+    summary: content.slice(0, 300),
+    script: content,
+  };
+}

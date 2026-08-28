@@ -9,7 +9,7 @@ import { listNewsletters } from "../../db/queries/newsletters.sql.js";
 import { getUserById, listUsers } from "../../db/queries/users.sql.js";
 import { ingestNewsletterForUser } from "../../services/gmail/gmailSync.js";
 import { uploadAudio } from "../../services/storage/uploadAudio.js";
-import { buildDailyDigestScript } from "../../services/summarize/chatgptDigest.js";
+import { buildDailyDigestScript } from "../../services/summarize/geminiDigest.js";
 import { generateAudio } from "../../services/tts/generateAudio.js";
 import { getAudioDurationSeconds } from "../../utils/audio.js";
 import { logger } from "../../utils/logger.js";
@@ -36,7 +36,7 @@ export async function prepareDailyDigestEpisode(
   const dayKey = startOfDay.toISOString().slice(0, 10);
   const digestKey = `digest-${dayKey}`;
   const dateLabel = formatDateLabel(now);
-  const resolvedVoice = voice?.trim() || env.OPENAI_TTS_VOICE || "en-US-Chirp3-HD-Leda";
+  const resolvedVoice = voice?.trim() || env.TTS_VOICE || "en-US-Chirp3-HD-Leda";
 
   const existing = await getEpisodeBySourceMessageId(userId, digestKey);
   if (!existing) {
@@ -65,7 +65,7 @@ export async function runDailyDigestForUser(
   now = new Date(),
   options: { force?: boolean; voice?: string } = {}
 ): Promise<string | null> {
-  const resolvedVoice = options.voice?.trim() || env.OPENAI_TTS_VOICE || "en-US-Chirp3-HD-Leda";
+  const resolvedVoice = options.voice?.trim() || env.TTS_VOICE || "en-US-Chirp3-HD-Leda";
   // Determine time window (daily schedule uses calendar day, manual uses last 24 hours)
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);

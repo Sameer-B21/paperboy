@@ -37,7 +37,7 @@ function readUserId(req: Request): string {
 //lists episodes for the authenticated user
 export async function listEpisodes(req: Request, res: Response) {
   const userId = readUserId(req);
-  const defaultVoice = env.OPENAI_TTS_VOICE ?? "en-US-Chirp3-HD-Leda";
+  const defaultVoice = env.TTS_VOICE ?? "en-US-Chirp3-HD-Leda";
   //get episodes from db
   const episodes = await listEpisodesByUser(userId);
   const payload = episodes.map((episode) => ({
@@ -60,7 +60,7 @@ export async function getEpisode(req: Request, res: Response) {
     res.status(404).json({ error: "Episode not found." });
     return;
   }
-  const defaultVoice = env.OPENAI_TTS_VOICE ?? "en-US-Chirp3-HD-Leda";
+  const defaultVoice = env.TTS_VOICE ?? "en-US-Chirp3-HD-Leda";
   res.json({
     id: episode.id,
     subject: episode.subject,
@@ -129,7 +129,7 @@ export async function generateDailyEpisode(req: Request, res: Response) {
     }
   });
 
-  const defaultVoice = env.OPENAI_TTS_VOICE ?? "en-US-Chirp3-HD-Leda";
+  const defaultVoice = env.TTS_VOICE ?? "en-US-Chirp3-HD-Leda";
   res.status(202).json({
     id: episode.id,
     subject: episode.subject,
@@ -152,7 +152,7 @@ export async function getLatestDailyEpisode(req: Request, res: Response) {
     res.status(404).json({ error: "Daily brief not found." });
     return;
   }
-  const defaultVoice = env.OPENAI_TTS_VOICE ?? "en-US-Chirp3-HD-Leda";
+  const defaultVoice = env.TTS_VOICE ?? "en-US-Chirp3-HD-Leda";
   res.json({
     id: episode.id,
     subject: episode.subject,

@@ -59,12 +59,20 @@ Roadmap for getting Paperboy published on the iOS App Store.
 - [ ] Set `BASE_URL` + `GOOGLE_REDIRECT_URI` to the deployed HTTPS URL; add that redirect URI in Google Cloud Console
 - [ ] Add a host cron job: daily 7 AM → `POST https://<host>/internal/cron/daily` with `x-cron-secret` header
 - [ ] Replace the placeholder URL in `eas.json`
-- [ ] Revoke unused Gemini / ElevenLabs keys sitting in local `backend/.env`
+- [ ] Revoke the unused ElevenLabs key in local `backend/.env`; revoke the OpenAI key once the Gemini swap is verified (no longer used by code)
+- [ ] Enable the **Generative Language API** for the `GEMINI_API_KEY` (Google Cloud Console → enable API + add it to the key's API restrictions, or mint a key in Google AI Studio) — the current key returns `API_KEY_SERVICE_BLOCKED`
+
+## Part 4.5 — LLM swap: OpenAI → Gemini ✅ DONE (code)
+
+- [x] Digest LLM moved from OpenAI Chat Completions to Gemini `generateContent` (`backend/src/services/summarize/geminiDigest.ts`, replaces `chatgptDigest.ts`); same prompt, 12k truncation, JSON schema output, cost logging from `usageMetadata`
+- [x] Model env-driven: `GEMINI_MODEL` (default `gemini-flash-latest` alias); `GEMINI_API_KEY` now required at boot, all `OPENAI_*` env vars removed; `OPENAI_TTS_VOICE` renamed `TTS_VOICE` (it's the Google TTS voice)
+- [x] Rationale: not cost (gpt-4o-mini was cheaper per token; either way <$0.01/episode) — consolidates all Gmail-content processing into the one Google Cloud project (Gmail OAuth + TTS + LLM), simplifying the privacy policy and CASA/OAuth verification story
+- [ ] Live end-to-end episode with Gemini — blocked on enabling the Generative Language API for the key (see Part 4)
 
 ## Part 5 — External (no code)
 
 - [ ] Apple Developer Program ($99/yr)
-- [ ] **Real bundle ID** (replace `com.anonymous.NewsletterPodcaster`) — deferred from Part 1; must happen *before* Google OAuth verification
+- [x] **Real bundle ID**: `com.sameerbandha.paperboy` set in `app.json` (iOS + Android; slug/scheme unchanged — slug is tied to the EAS project, scheme to the OAuth redirect). Native `ios/` picks it up on next prebuild/EAS build; EAS auto-registers the App ID (+ widget ID) at first build
 - [ ] ⏳ Google OAuth verification + CASA Tier 2 security assessment for `gmail.readonly` (weeks–months, ~$500–4,500/yr; 100-user cap until approved) — **start as soon as privacy policy + domain exist**
 - [ ] Privacy policy + terms hosted at a public URL (disclose: Gmail read/stored, sent to OpenAI + Google TTS, retention, deletion)
 - [ ] Domain name (API + privacy policy)
