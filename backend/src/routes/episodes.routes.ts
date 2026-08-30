@@ -4,7 +4,6 @@ import { ipKeyGenerator, rateLimit } from "express-rate-limit";
 import {
   generateDailyEpisode,
   getEpisode,
-  getEpisodeAudio,
   getLatestDailyEpisode,
   listEpisodes,
 } from "../controllers/episodes.controller.js";
@@ -29,4 +28,5 @@ episodesRouter.get("/", asyncHandler(listEpisodes));
 episodesRouter.post("/daily", generationLimiter, asyncHandler(generateDailyEpisode));
 episodesRouter.get("/daily/latest", asyncHandler(getLatestDailyEpisode));
 episodesRouter.get("/:episodeId", asyncHandler(getEpisode));
-episodesRouter.get("/:episodeId/audio", asyncHandler(getEpisodeAudio));
+//NOTE: /:episodeId/audio is mounted in app.ts with requireUserOrSignedAudioUrl
+//(web media elements can't send the Authorization header)

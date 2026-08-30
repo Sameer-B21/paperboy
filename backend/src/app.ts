@@ -7,7 +7,8 @@ import { env } from "./config/env.js";
 import { supabase } from "./config/supabase.js";
 import { jobQueue } from "./jobs/queue.js";
 import { runDailyDigestForDueUsers } from "./jobs/workers/dailyDigest.worker.js";
-import { requireUser } from "./middleware/requireUser.js";
+import { getEpisodeAudio } from "./controllers/episodes.controller.js";
+import { requireUser, requireUserOrSignedAudioUrl } from "./middleware/requireUser.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { episodesRouter } from "./routes/episodes.routes.js";
 import { gmailRouter } from "./routes/gmail.routes.js";
@@ -69,6 +70,9 @@ export function createApp() {
     authRouter
   );
   app.use("/gmail", requireUser, gmailRouter);
+  //audio accepts a signed URL token as well as the session header, because
+  //HTML5 <audio> on web can't send Authorization headers
+  app.get("/episodes/:episodeId/audio", requireUserOrSignedAudioUrl, asyncHandler(getEpisodeAudio));
   app.use("/episodes", requireUser, episodesRouter);
   app.use("/webhooks", webhooksRouter);
   app.use("/tts", requireUser, ttsRouter);

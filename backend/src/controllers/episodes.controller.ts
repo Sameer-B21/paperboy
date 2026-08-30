@@ -14,15 +14,19 @@ import {
 } from "../jobs/workers/dailyDigest.worker.js";
 import { ingestNewsletterForUser } from "../services/gmail/gmailSync.js";
 import { downloadAudio } from "../services/storage/uploadAudio.js";
+import { issueAudioToken } from "../middleware/requireUser.js";
 import { AppError } from "../utils/errors.js";
 import { logger } from "../utils/logger.js";
 import { normalizeTtsVoice } from "../utils/tts.js";
 
-function buildEpisodeAudioUrl(episodeId: string, cacheKey?: string): string {
+function buildEpisodeAudioUrl(userId: string, episodeId: string, cacheKey?: string): string {
   const url = new URL(`${env.BASE_URL}/episodes/${episodeId}/audio`);
   if (cacheKey) {
     url.searchParams.set("v", cacheKey);
   }
+  //web media elements can't send the Authorization header, so the URL carries
+  //a short-lived token scoped to this episode
+  url.searchParams.set("t", issueAudioToken(userId, episodeId));
   return url.toString();
 }
 
@@ -68,7 +72,7 @@ export async function getEpisode(req: Request, res: Response) {
     script: episode.script,
     status: episode.status,
     voice: episode.voice ?? defaultVoice,
-    audioUrl: episode.audioPath ? buildEpisodeAudioUrl(episode.id, episode.updatedAt) : null,
+    audioUrl: episode.audioPath ? buildEpisodeAudioUrl(userId, episode.id, episode.updatedAt) : null,
     audioDurationSeconds: episode.audioDurationSeconds,
     createdAt: episode.createdAt,
   });
@@ -87,6 +91,10 @@ export async function getEpisodeAudio(req: Request, res: Response) {
   const audio = await downloadAudio(episode.audioPath);
   res.setHeader("Content-Type", audio.contentType ?? "audio/mpeg");
   res.setHeader("Cache-Control", "private, max-age=3600");
+  //helmet defaults to CORP same-origin, which blocks the web app's <audio>
+  //element (a cross-origin no-cors media request); the route is still guarded
+  //by the session/audio token
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   res.send(audio.data);
 }
 
@@ -160,7 +168,7 @@ export async function getLatestDailyEpisode(req: Request, res: Response) {
     script: episode.script,
     status: episode.status,
     voice: episode.voice ?? defaultVoice,
-    audioUrl: episode.audioPath ? buildEpisodeAudioUrl(episode.id, episode.updatedAt) : null,
+    audioUrl: episode.audioPath ? buildEpisodeAudioUrl(userId, episode.id, episode.updatedAt) : null,
     audioDurationSeconds: episode.audioDurationSeconds,
     createdAt: episode.createdAt,
   });

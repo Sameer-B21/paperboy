@@ -67,7 +67,9 @@ Roadmap for getting Paperboy published on the iOS App Store.
 - [x] Digest LLM moved from OpenAI Chat Completions to Gemini `generateContent` (`backend/src/services/summarize/geminiDigest.ts`, replaces `chatgptDigest.ts`); same prompt, 12k truncation, JSON schema output, cost logging from `usageMetadata`
 - [x] Model env-driven: `GEMINI_MODEL` (default `gemini-flash-latest` alias); `GEMINI_API_KEY` now required at boot, all `OPENAI_*` env vars removed; `OPENAI_TTS_VOICE` renamed `TTS_VOICE` (it's the Google TTS voice)
 - [x] Rationale: not cost (gpt-4o-mini was cheaper per token; either way <$0.01/episode) — consolidates all Gmail-content processing into the one Google Cloud project (Gmail OAuth + TTS + LLM), simplifying the privacy policy and CASA/OAuth verification story
-- [ ] Live end-to-end episode with Gemini — blocked on enabling the Generative Language API for the key (see Part 4)
+- [x] Live end-to-end episode with Gemini — verified: real Gmail newsletters → Gemini script → Google TTS → Supabase upload → playable in the web app (Gemini + TTS now use two separate least-privilege API keys)
+- [x] Cost logging counts Gemini thinking tokens (`thoughtsTokenCount`, billed at the output rate — was undercounting ~3x)
+- [x] **Web playback fixed** (broken since Part 2's auth change): audio URLs now carry a short-lived episode-scoped signed token (`?t=`, 24h) because HTML5 `<audio>` can't send Authorization headers; audio response sets `Cross-Origin-Resource-Policy: cross-origin` (helmet's same-origin default blocked cross-origin media). iOS keeps using the Bearer header — **re-verify playback on the simulator** (untested since Part 2)
 
 ## Part 5 — External (no code)
 
