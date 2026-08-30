@@ -8,6 +8,7 @@ export type DigestItem = {
 type UsageMetadata = {
   promptTokenCount?: number;
   candidatesTokenCount?: number;
+  thoughtsTokenCount?: number;
   totalTokenCount?: number;
 };
 
@@ -29,7 +30,8 @@ function formatUsageCost(model: string, usage?: UsageMetadata): string {
     return "tokens unknown; cost unknown";
   }
   const promptTokens = usage.promptTokenCount ?? 0;
-  const completionTokens = usage.candidatesTokenCount ?? 0;
+  // thinking tokens are billed at the output rate
+  const completionTokens = (usage.candidatesTokenCount ?? 0) + (usage.thoughtsTokenCount ?? 0);
   const totalTokens = usage.totalTokenCount ?? promptTokens + completionTokens;
   const pricing = MODEL_PRICING[model];
   if (!pricing) {
