@@ -69,7 +69,7 @@ Roadmap for getting Paperboy published on the iOS App Store.
 - [x] Rationale: not cost (gpt-4o-mini was cheaper per token; either way <$0.01/episode) — consolidates all Gmail-content processing into the one Google Cloud project (Gmail OAuth + TTS + LLM), simplifying the privacy policy and CASA/OAuth verification story
 - [x] Live end-to-end episode with Gemini — verified: real Gmail newsletters → Gemini script → Google TTS → Supabase upload → playable in the web app (Gemini + TTS now use two separate least-privilege API keys)
 - [x] Cost logging counts Gemini thinking tokens (`thoughtsTokenCount`, billed at the output rate — was undercounting ~3x)
-- [x] **Web playback fixed** (broken since Part 2's auth change): audio URLs now carry a short-lived episode-scoped signed token (`?t=`, 24h) because HTML5 `<audio>` can't send Authorization headers; audio response sets `Cross-Origin-Resource-Policy: cross-origin` (helmet's same-origin default blocked cross-origin media). iOS keeps using the Bearer header — **re-verify playback on the simulator** (untested since Part 2)
+- [x] **Web playback fixed** (broken since Part 2's auth change): audio URLs now carry a short-lived episode-scoped signed token (`?t=`, 24h) because HTML5 `<audio>` can't send Authorization headers; audio response sets `Cross-Origin-Resource-Policy: cross-origin` (helmet's same-origin default blocked cross-origin media). iOS keeps using the Bearer header — verified on the simulator (episode loads, audio plays, position advances)
 
 ## Part 5 — External (no code)
 
