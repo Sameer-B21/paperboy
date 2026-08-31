@@ -71,14 +71,43 @@ Roadmap for getting Paperboy published on the iOS App Store.
 - [x] Cost logging counts Gemini thinking tokens (`thoughtsTokenCount`, billed at the output rate — was undercounting ~3x)
 - [x] **Web playback fixed** (broken since Part 2's auth change): audio URLs now carry a short-lived episode-scoped signed token (`?t=`, 24h) because HTML5 `<audio>` can't send Authorization headers; audio response sets `Cross-Origin-Resource-Policy: cross-origin` (helmet's same-origin default blocked cross-origin media). iOS keeps using the Bearer header — verified on the simulator (episode loads, audio plays, position advances)
 
+## Part 4.6 — Public site + data retention ✅ DONE (code)
+
+- [x] **Domain bought**: `paperboyhq.com` (Porkbun), with `support@paperboyhq.com` forwarding to Gmail (free forwarding — receive-only; a real mailbox is only needed if you want to reply *from* that address)
+- [x] **Public site** in `site/` — plain static HTML, no build step: homepage, `/privacy`, `/terms`, shared stylesheet matching `constants/palette.ts`. Deploy notes in `site/README.md`
+- [x] Privacy policy written against what the code actually does (scopes, scan windows, what's stored, subprocessors, encryption, retention) with the **Google API Limited Use disclosure** reviewers look for
+- [x] `constants/links.ts` placeholders replaced with the real `paperboyhq.com` URLs + support address
+- [x] **30-day retention sweep** (`backend/src/services/security/retention.ts`): deletes episodes and their audio past `EPISODE_RETENTION_DAYS` (default 30). Runs hourly from the in-process scheduler *and* from `/internal/cron/daily`, so it works with `ENABLE_SCHEDULER` either way. Audio is removed before rows so no orphaned files are stranded in the private bucket
+- [ ] **Before publishing the site**: fill in `[STATE]` in `site/terms.html` §11, and name the hosting provider in `site/privacy.html` §6 once the backend is deployed
+
 ## Part 5 — External (no code)
 
-- [ ] Apple Developer Program ($99/yr)
+- [ ] Deploy `site/` to Cloudflare Pages and point `paperboyhq.com` at it (steps in `site/README.md`)
+- [ ] ⏳ Verify `paperboyhq.com` in Google Search Console (DNS TXT record at Porkbun) — **blocks everything below it**
+- [ ] Google Cloud Console → OAuth consent screen: homepage + privacy + terms URLs, `paperboyhq.com` as an authorized domain, logo
+- [x] Apple Developer Program ($99/yr)
 - [x] **Real bundle ID**: `com.sameerbandha.paperboy` set in `app.json` (iOS + Android; slug/scheme unchanged — slug is tied to the EAS project, scheme to the OAuth redirect). Native `ios/` picks it up on next prebuild/EAS build; EAS auto-registers the App ID (+ widget ID) at first build
 - [ ] ⏳ Google OAuth verification + CASA Tier 2 security assessment for `gmail.readonly` (weeks–months, ~$500–4,500/yr; 100-user cap until approved) — **start as soon as privacy policy + domain exist**
-- [ ] Privacy policy + terms hosted at a public URL (disclose: Gmail read/stored, sent to OpenAI + Google TTS, retention, deletion)
-- [ ] Domain name (API + privacy policy)
+- [x] Privacy policy + terms written (`site/privacy.html`, `site/terms.html`) — hosting is the open step above
+- [x] Domain name (API + privacy policy) — `paperboyhq.com`
 - [ ] App Store Connect: app record, name check, screenshots, description, privacy questionnaire
 - [ ] `eas.json` submit config (`appleId`, `ascAppId`, `appleTeamId`)
 - [ ] TestFlight beta pass end-to-end
 - [ ] Submit for review
+
+## Future ideas (post-launch)
+
+- [ ] **Newsletter search / discovery.** Today the newsletter list is limited to whatever
+      the 30-day scan happens to surface (`gmailSync.ts` — 50 messages, `List-Unsubscribe`
+      header or "newsletter"/"digest" in sender/subject), so older or quieter subscriptions
+      get missed entirely. Two levels:
+      1. *Search your own Gmail* — let the user type a name or sender and query Gmail
+         directly for it, instead of only picking from the auto-detected list. Mostly a
+         new query path in `gmailSync.ts` plus a search UI; stays inside the existing
+         `gmail.readonly` scope, so **no new OAuth review**.
+      2. *Subscribe to any newsletter* — a catalogue of publications the user isn't
+         subscribed to, pulled from public RSS/web rather than their inbox. Bigger: needs
+         a content source, and briefings would no longer be purely inbox-derived. Worth
+         noting it would also make the app useful before a user connects Gmail at all,
+         which weakens the "single-service client" argument for the Sign in with Apple
+         exemption — check that before building it.

@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Paperboy</title>
+<meta name="description" content="How Paperboy collects, uses, stores, and deletes your data — including exactly what it reads from Gmail and why.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="mark">◗</span> Paperboy</a>
+    <nav class="site">
+      <a href="/">Home</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+    </nav>
+  </div>
+</header>
+
+<main class="legal">
+  <div class="wrap">
+
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated 31 August 2026 · Effective 31 August 2026</p>
+
+    <p>
+      Paperboy reads your email in order to work, so this policy is written to be read
+      rather than skimmed past. It describes precisely what Paperboy accesses, what it
+      stores, who else sees it, how long it is kept, and how to get rid of it.
+    </p>
+    <p>
+      Paperboy ("we", "us") is an iOS app operated by Sameer Bandha, an independent
+      developer. Contact:
+      <a href="mailto:support@paperboyhq.com">support@paperboyhq.com</a>.
+    </p>
+
+    <div class="toc">
+      <ol>
+        <li><a href="#summary">The short version</a></li>
+        <li><a href="#collect">What we collect</a></li>
+        <li><a href="#gmail">What we read from Gmail</a></li>
+        <li><a href="#use">How we use it</a></li>
+        <li><a href="#google">Google API Limited Use</a></li>
+        <li><a href="#share">Who else sees your data</a></li>
+        <li><a href="#retention">How long we keep it</a></li>
+        <li><a href="#security">How it's protected</a></li>
+        <li><a href="#rights">Your choices and rights</a></li>
+        <li><a href="#other">Children, location, and changes</a></li>
+      </ol>
+    </div>
+
+    <h2 id="summary">1. The short version</h2>
+    <ul>
+      <li>Paperboy has <strong>read-only</strong> access to Gmail. It cannot send, delete, or modify your mail.</li>
+      <li>After the initial scan that finds your newsletters, it only fetches mail from the <strong>senders you selected</strong>.</li>
+      <li>Newsletter text is processed by <strong>Google Gemini</strong> and <strong>Google Cloud Text-to-Speech</strong> — no other AI provider.</li>
+      <li>Your email is <strong>never used to train AI models</strong>, ours or anyone else's.</li>
+      <li>Briefings and the newsletter text behind them are <strong>automatically deleted after 30 days</strong>.</li>
+      <li>We <strong>never sell, rent, or share</strong> your data with advertisers or data brokers.</li>
+      <li>No human at Paperboy reads your email.</li>
+      <li>You can <strong>erase everything</strong> from Settings in the app, at any time.</li>
+    </ul>
+
+    <h2 id="collect">2. What we collect</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Data</th><th>Where it comes from</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Email address and name</td>
+            <td>Your Google account, at sign-in</td>
+            <td>Identifies your account and lets the briefing greet you by name</td>
+          </tr>
+          <tr>
+            <td>Newsletter names and sender addresses</td>
+            <td>A scan of your recent mail</td>
+            <td>Builds the list of newsletters you choose from</td>
+          </tr>
+          <tr>
+            <td>Newsletter subject lines and body text</td>
+            <td>Gmail — only from senders you selected</td>
+            <td>The raw material the briefing is written from</td>
+          </tr>
+          <tr>
+            <td>Generated summary, script, and audio file</td>
+            <td>Created by Paperboy</td>
+            <td>The briefing you listen to</td>
+          </tr>
+          <tr>
+            <td>Preferences: briefing length, delivery hour, voice</td>
+            <td>You, in the app</td>
+            <td>Delivers the right briefing at the right time. The delivery hour is stored converted to UTC, so we never store your timezone or location</td>
+          </tr>
+          <tr>
+            <td>Google access and refresh tokens</td>
+            <td>Google, when you connect Gmail</td>
+            <td>Keeps the connection alive so the briefing can be made while you sleep. Stored encrypted</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      Paperboy has <strong>no analytics, no advertising SDKs, and no third-party
+      trackers</strong>. It does not collect your location, contacts, device identifiers,
+      or browsing activity, and it does not track you across other apps or websites.
+    </p>
+
+    <h2 id="gmail">3. What we read from Gmail</h2>
+    <p>
+      Paperboy requests three Google permissions:
+      <code>gmail.readonly</code>, <code>userinfo.email</code>, and
+      <code>userinfo.profile</code>. The Gmail permission is read-only; the app has no
+      technical ability to send, delete, archive, label, or alter anything in your
+      mailbox.
+    </p>
+    <h3>Finding your newsletters (one-time, and when you refresh the list)</h3>
+    <p>
+      Paperboy looks at up to 50 messages from the last 30 days and identifies which are
+      newsletters — a message counts if it carries the standard
+      <code>List-Unsubscribe</code> header used by bulk senders, or if "newsletter" or
+      "digest" appears in the sender or subject. From these, Paperboy keeps only the
+      <strong>sender name and address</strong> so it can show you a list. The contents of
+      messages examined during this scan are not stored.
+    </p>
+    <h3>Building your daily briefing (every day)</h3>
+    <p>
+      Once you've chosen your newsletters, the daily run queries Gmail only for messages
+      <strong>from those specific senders</strong>, from the last 24 hours, up to 25 per
+      sender. Nothing else in your mailbox is requested. Personal correspondence,
+      receipts, and any newsletter you did not select are never fetched and never stored.
+    </p>
+
+    <h2 id="use">4. How we use it</h2>
+    <p>Your data is used only to produce and deliver your briefing. Specifically:</p>
+    <ul>
+      <li>The text of your selected newsletters is sent to the <strong>Google Gemini API</strong>, which condenses it into a summary and a spoken script. Up to roughly 12,000 characters per run is sent.</li>
+      <li>That script is sent to <strong>Google Cloud Text-to-Speech</strong>, which returns the audio.</li>
+      <li>The audio is stored in a private file bucket and streamed back to your device when you press play.</li>
+    </ul>
+    <p>
+      We do not use your data for advertising, profiling, or any purpose unrelated to
+      producing your briefing. We do not use it to train, fine-tune, or improve any AI or
+      machine-learning model, and our providers are contractually prohibited from doing
+      so with data submitted through their paid APIs.
+    </p>
+    <p>
+      <strong>No human reads your email.</strong> No employee or contractor accesses
+      message content, except in the narrow circumstances Google's policy permits: with
+      your explicit consent for a specific message (for example, if you send us one to
+      debug a problem you reported), where necessary for security or to investigate
+      abuse, or where required by law.
+    </p>
+
+    <h2 id="google">5. Google API Limited Use</h2>
+    <div class="callout">
+      <p>
+        Paperboy's use of information received from Google APIs adheres to the
+        <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google
+        API Services User Data Policy</a>, including the Limited Use requirements.
+      </p>
+    </div>
+    <p>Concretely, that commitment means Paperboy:</p>
+    <ul>
+      <li>uses Google user data only to provide and improve the briefing feature you signed up for;</li>
+      <li>transfers it only to the providers listed below, only to deliver that feature, or where required by law;</li>
+      <li>never uses it for advertising of any kind;</li>
+      <li>never allows humans to read it, except in the limited cases described above;</li>
+      <li>never uses it to develop, train, or improve generalized AI or machine-learning models.</li>
+    </ul>
+
+    <h2 id="share">6. Who else sees your data</h2>
+    <p>
+      We do not sell, rent, or trade your data. It is shared only with the service
+      providers that make the app work, each limited to what it needs:
+    </p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Provider</th><th>What it receives</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Google (Gmail API)</td>
+            <td>The read request itself</td>
+            <td>Source of your newsletters</td>
+          </tr>
+          <tr>
+            <td>Google (Gemini API)</td>
+            <td>Text of your selected newsletters</td>
+            <td>Writes the summary and script</td>
+          </tr>
+          <tr>
+            <td>Google (Cloud Text-to-Speech)</td>
+            <td>The generated script</td>
+            <td>Turns the script into audio</td>
+          </tr>
+          <tr>
+            <td>Supabase</td>
+            <td>Your account record, preferences, newsletter selections, briefings, and audio files</td>
+            <td>Database and private file storage</td>
+          </tr>
+          <tr>
+            <td>Our cloud hosting provider</td>
+            <td>Data in transit while the server processes it</td>
+            <td>Runs the Paperboy server</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      We may also disclose data if legally compelled to — a valid subpoena, court order,
+      or equivalent legal process — or where necessary to investigate fraud or protect
+      someone's safety. If Paperboy were ever acquired, your data could transfer to the
+      acquirer, who would remain bound by this policy; we would notify you first.
+    </p>
+
+    <h2 id="retention">7. How long we keep it</h2>
+    <ul>
+      <li>
+        <strong>Briefings, newsletter text, and audio: 30 days.</strong> These are deleted
+        automatically on a rolling window by a scheduled job. You do not have to do
+        anything, and there is no way to opt out of the deletion.
+      </li>
+      <li>
+        <strong>Account details, preferences, newsletter selections, and Google tokens:</strong>
+        kept while your account exists, because the app cannot function without them.
+      </li>
+      <li>
+        <strong>When you delete your account:</strong> we revoke Paperboy's access to your
+        Google account, delete every audio file, and erase every database record
+        associated with you. This is immediate and cannot be undone.
+      </li>
+    </ul>
+    <p>
+      Residual copies may persist briefly in our database provider's encrypted backups
+      before those backups age out on their normal rotation. They are not accessible to
+      the app and are never restored into it.
+    </p>
+
+    <h2 id="security">8. How it's protected</h2>
+    <ul>
+      <li>Your Google access and refresh tokens are <strong>encrypted at rest with AES-256-GCM</strong> using a key held only by the server.</li>
+      <li>Your audio lives in a <strong>private storage bucket</strong> with no public access. It is reachable only through a short-lived link, signed for your account and that one briefing, which expires within 24 hours.</li>
+      <li>All traffic between the app and our server travels over <strong>HTTPS</strong>.</li>
+      <li>Your login session is a signed token stored in the <strong>iOS keychain</strong>, the operating system's protected credential store.</li>
+      <li>Every request is checked against the signed-in account, so one user's briefings can never be fetched by another.</li>
+    </ul>
+    <p>
+      No system is perfectly secure, and we can't promise absolute security. If a breach
+      ever affected your data, we would notify you and the relevant authorities as
+      required by law.
+    </p>
+
+    <h2 id="rights">9. Your choices and rights</h2>
+    <ul>
+      <li><strong>Change what's read.</strong> Deselect a newsletter in the app and Paperboy stops fetching from that sender.</li>
+      <li><strong>Disconnect Gmail.</strong> Signing out revokes our access to your Google account and deletes the stored tokens.</li>
+      <li><strong>Delete everything.</strong> Settings → Delete Account erases all of it, permanently.</li>
+      <li><strong>Revoke from Google's side.</strong> You can remove Paperboy's access at any time at <a href="https://myaccount.google.com/permissions" rel="noopener">myaccount.google.com/permissions</a>, independently of the app.</li>
+    </ul>
+    <p>
+      Depending on where you live — including the EEA, the UK, and California — you may
+      have rights to access, correct, export, or delete your personal data, to object to
+      or restrict its processing, and to withdraw consent. The in-app deletion covers
+      most of these instantly. For anything else, email
+      <a href="mailto:support@paperboyhq.com">support@paperboyhq.com</a> and we'll respond
+      within 30 days. You also have the right to complain to your local data protection
+      authority.
+    </p>
+    <p>
+      For users in the EEA and UK: we process your data to perform our agreement with you
+      (delivering the briefing you asked for) and on the basis of the consent you give on
+      Google's permission screen, which you can withdraw at any time using the links
+      above. <strong>Paperboy does not sell or share personal information</strong> as
+      those terms are defined under the California Consumer Privacy Act.
+    </p>
+
+    <h2 id="other">10. Children, location, and changes</h2>
+    <p>
+      <strong>Children.</strong> Paperboy is not directed at children and is not intended
+      for anyone under 13. We do not knowingly collect data from children. If you believe
+      a child has given us data, email us and we'll delete it.
+    </p>
+    <p>
+      <strong>Where your data is processed.</strong> Paperboy's server and providers
+      operate in the United States. If you use the app from elsewhere, your data is
+      transferred to and processed in the US, which may have different data protection
+      laws than your country.
+    </p>
+    <p>
+      <strong>Changes.</strong> If this policy changes materially, we'll update the date
+      at the top and notify you in the app before the change takes effect. Continuing to
+      use Paperboy afterwards means you accept the revised policy.
+    </p>
+    <p>
+      <strong>Questions.</strong>
+      <a href="mailto:support@paperboyhq.com">support@paperboyhq.com</a> — a real person
+      reads it.
+    </p>
+
+  </div>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/terms">Terms of Service</a>
+      <a href="mailto:support@paperboyhq.com">Contact</a>
+    </div>
+    <div>© 2026 Paperboy</div>
+  </div>
+</footer>
+
+</body>
+</html>
