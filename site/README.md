@@ -16,8 +16,7 @@ Apple separately requires a public privacy policy URL.
 
 ## Fill these in before publishing
 
-- [ ] **`terms.html` §11** — `[STATE]` is a placeholder. Put your actual state in, or
-      delete the section and get proper legal advice.
+- [x] **`terms.html` §11** — governing law set to Ontario, Canada.
 - [ ] **`privacy.html` §6** — "Our cloud hosting provider" is deliberately generic
       because the host isn't chosen yet. Name it (Railway, Render, …) once you deploy.
 - [ ] Read both documents end to end. They describe what the code actually does today,
