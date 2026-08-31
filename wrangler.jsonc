@@ -5,11 +5,20 @@
   // domain paperboyhq.com is bound to. Renaming it creates a second Worker
   // with no domain attached and leaves the live site on the old one.
   //
-  //   npx wrangler login     (once, opens a browser)
   //   npx wrangler deploy
   "name": "holy-sun-cb37",
+  "main": "worker/index.js",
   "compatibility_date": "2026-08-31",
   "assets": {
-    "directory": "./site"
-  }
+    "directory": "./site",
+    "binding": "ASSETS",
+    // Without this, a matching asset is served BEFORE the script runs, so the
+    // www redirect below never fires for paths that exist (like "/").
+    "run_worker_first": true
+  },
+  // Both hostnames hit this Worker; the script redirects www to the apex.
+  "routes": [
+    { "pattern": "paperboyhq.com", "custom_domain": true },
+    { "pattern": "www.paperboyhq.com", "custom_domain": true }
+  ]
 }
