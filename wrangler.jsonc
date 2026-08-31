@@ -1,0 +1,15 @@
+{
+  // Deploys the static site in site/ to paperboyhq.com.
+  //
+  // "name" MUST stay holy-sun-cb37 — that is the existing Worker the custom
+  // domain paperboyhq.com is bound to. Renaming it creates a second Worker
+  // with no domain attached and leaves the live site on the old one.
+  //
+  //   npx wrangler login     (once, opens a browser)
+  //   npx wrangler deploy
+  "name": "holy-sun-cb37",
+  "compatibility_date": "2026-08-31",
+  "assets": {
+    "directory": "./site"
+  }
+}
