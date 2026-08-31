@@ -23,6 +23,7 @@ export type Env = {
   GOOGLE_TTS_API_KEY: string;
   CRON_SECRET?: string;
   ENABLE_SCHEDULER: boolean;
+  EPISODE_RETENTION_DAYS: number;
 };
 
 //function that forcess specific environment variables to exist and returns value
@@ -55,4 +56,7 @@ export const env: Env = {
   CRON_SECRET: process.env.CRON_SECRET,
   //in-process scheduler (per-user delivery hours); disable on hosts that trigger /internal/cron/daily hourly instead
   ENABLE_SCHEDULER: process.env.ENABLE_SCHEDULER !== "false",
+  //episodes (which hold newsletter text) are purged after this many days.
+  //This number is published in the privacy policy — keep the two in step.
+  EPISODE_RETENTION_DAYS: Number.parseInt(process.env.EPISODE_RETENTION_DAYS ?? "30", 10),
 };

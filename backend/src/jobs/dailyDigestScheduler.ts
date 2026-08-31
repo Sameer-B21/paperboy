@@ -1,3 +1,4 @@
+import { purgeExpiredEpisodes } from "../services/security/retention.js";
 import { logger } from "../utils/logger.js";
 import { runDailyDigestForDueUsers } from "./workers/dailyDigest.worker.js";
 
@@ -17,6 +18,13 @@ async function tick() {
     await runDailyDigestForDueUsers(now);
   } catch (error) {
     logger.error("Daily digest scheduler failed", { error });
+  }
+  //runs even if the digest above threw — retention is a privacy promise, not a
+  //feature, so it must not depend on generation succeeding
+  try {
+    await purgeExpiredEpisodes(now);
+  } catch (error) {
+    logger.error("Retention sweep failed", { error });
   }
 }
 

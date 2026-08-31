@@ -222,6 +222,39 @@ export async function getLatestDailyDigest(userId: string): Promise<Episode | nu
   return data ? toEpisode(data as EpisodeRow) : null;
 }
 
+// Lists every user's episodes created before a cutoff, for the retention sweep.
+// Only the columns the sweep needs, so an old backlog can't pull whole newsletter
+// bodies into memory.
+export async function listEpisodesOlderThan(
+  cutoffIso: string,
+  limit = 500
+): Promise<Array<{ id: string; audioPath: string | null }>> {
+  const { data, error } = await supabase
+    .from("episodes")
+    .select("id, audio_path")
+    .lt("created_at", cutoffIso)
+    .order("created_at", { ascending: true })
+    .limit(limit);
+  if (error) {
+    throw new Error(`Failed to list expired episodes: ${error.message}`);
+  }
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    audioPath: (row.audio_path as string | null) ?? null,
+  }));
+}
+
+// Deletes a specific set of episodes by id
+export async function deleteEpisodesByIds(episodeIds: string[]): Promise<void> {
+  if (episodeIds.length === 0) {
+    return;
+  }
+  const { error } = await supabase.from("episodes").delete().in("id", episodeIds);
+  if (error) {
+    throw new Error(`Failed to delete episodes: ${error.message}`);
+  }
+}
+
 // Deletes all of a user's episodes
 export async function deleteEpisodesByUser(userId: string): Promise<void> {
   const { error } = await supabase.from("episodes").delete().eq("user_id", userId);

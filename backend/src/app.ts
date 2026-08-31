@@ -9,6 +9,7 @@ import { jobQueue } from "./jobs/queue.js";
 import { runDailyDigestForDueUsers } from "./jobs/workers/dailyDigest.worker.js";
 import { getEpisodeAudio } from "./controllers/episodes.controller.js";
 import { requireUser, requireUserOrSignedAudioUrl } from "./middleware/requireUser.js";
+import { purgeExpiredEpisodes } from "./services/security/retention.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { episodesRouter } from "./routes/episodes.routes.js";
 import { gmailRouter } from "./routes/gmail.routes.js";
@@ -59,7 +60,13 @@ export function createApp() {
       res.status(401).json({ error: "Unauthorized." });
       return;
     }
-    jobQueue.add(() => runDailyDigestForDueUsers(new Date()));
+    jobQueue.add(async () => {
+      const now = new Date();
+      await runDailyDigestForDueUsers(now);
+      //same as the in-process scheduler: hosts running with ENABLE_SCHEDULER=false
+      //would otherwise never expire old newsletter text
+      await purgeExpiredEpisodes(now);
+    });
     res.status(202).json({ status: "queued" });
   });
 
