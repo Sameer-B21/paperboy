@@ -24,17 +24,22 @@ Apple separately requires a public privacy policy URL.
 
 ## Deploying
 
-**Cloudflare Pages** (recommended — free, HTTPS included, and the direct-upload option
-needs no CI or repo access):
+Served by a **Cloudflare Worker** — `wrangler.jsonc` (repo root) binds `site/` as
+static assets to the existing Worker `holy-sun-cb37`, which `paperboyhq.com` and
+`www.paperboyhq.com` are already routed to as custom domains. `worker/index.js`
+serves the assets and 301-redirects `www` → apex so the site has one canonical
+address (see the comment in `wrangler.jsonc` — the Worker must keep that exact
+name, since that's what the custom domain is bound to; renaming it creates a
+second, unrouted Worker).
 
-1. Cloudflare dashboard → Workers & Pages → Create → Pages → **Upload assets**.
-2. Drag in this `site/` folder. Name the project `paperboy`.
-3. Custom domains → add `paperboyhq.com` → Cloudflare gives you a DNS record.
-4. In **Porkbun** → Details → DNS, add that record.
+To deploy a change:
 
-Clean URLs (`/privacy` rather than `/privacy.html`) work by default on Cloudflare Pages
-and GitHub Pages. If you host somewhere that doesn't do this, either rename the files to
-`privacy/index.html` and `terms/index.html`, or add a redirect rule.
+```bash
+npx wrangler deploy
+```
+
+Clean URLs (`/privacy` rather than `/privacy.html`) work by default under this
+setup.
 
 ## Then: the Google Cloud steps these pages unblock
 

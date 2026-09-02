@@ -78,11 +78,12 @@ Roadmap for getting Paperboy published on the iOS App Store.
 - [x] Privacy policy written against what the code actually does (scopes, scan windows, what's stored, subprocessors, encryption, retention) with the **Google API Limited Use disclosure** reviewers look for
 - [x] `constants/links.ts` placeholders replaced with the real `paperboyhq.com` URLs + support address
 - [x] **30-day retention sweep** (`backend/src/services/security/retention.ts`): deletes episodes and their audio past `EPISODE_RETENTION_DAYS` (default 30). Runs hourly from the in-process scheduler *and* from `/internal/cron/daily`, so it works with `ENABLE_SCHEDULER` either way. Audio is removed before rows so no orphaned files are stranded in the private bucket
-- [ ] **Before publishing the site**: fill in `[STATE]` in `site/terms.html` §11, and name the hosting provider in `site/privacy.html` §6 once the backend is deployed
+- [x] `terms.html` §11 governing law filled in (Ontario, Canada)
+- [ ] Name the hosting provider in `site/privacy.html` §6 once the backend is deployed (still a deliberate placeholder)
 
 ## Part 5 — External (no code)
 
-- [ ] Deploy `site/` to Cloudflare Pages and point `paperboyhq.com` at it (steps in `site/README.md`)
+- [x] Deploy `site/` and point `paperboyhq.com` at it — done as a Cloudflare Worker (`wrangler.jsonc` + `worker/index.js`, `npx wrangler deploy`), not the Pages dashboard-upload flow `site/README.md` used to describe; includes a www→apex redirect
 - [ ] ⏳ Verify `paperboyhq.com` in Google Search Console (DNS TXT record at Porkbun) — **blocks everything below it**
 - [ ] Google Cloud Console → OAuth consent screen: homepage + privacy + terms URLs, `paperboyhq.com` as an authorized domain, logo
 - [x] Apple Developer Program ($99/yr)
