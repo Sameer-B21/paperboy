@@ -42,7 +42,7 @@ Roadmap for getting Paperboy published on the iOS App Store.
 - [x] Settings links: Privacy Policy, Terms, Contact Support (**URLs are placeholders in `constants/links.ts` — replace with real hosted URLs before submission**)
 - [ ] Sign in with Apple: likely exempt (app is a client for one specific service — Gmail); write reviewer notes for App Store Connect; add only if review pushes back
 
-## Part 4 — Deployment (code ✅ / hosting steps are yours)
+## Part 4 — Deployment ✅ LIVE (a few follow-ups below)
 
 - [x] Episode generation moved out of the request path: `POST /episodes/daily` returns 202 + episode id instantly, work runs in the background, app polls until `completed`/`failed` (verified: 202 in <1s)
 - [x] Host-cron endpoint `POST /internal/cron/daily` (guarded by `CRON_SECRET` header); in-process scheduler can be disabled with `ENABLE_SCHEDULER=false` (a host cron must then fire **hourly**)
@@ -54,13 +54,25 @@ Roadmap for getting Paperboy published on the iOS App Store.
 - [x] `eas.json` production profile has the `EXPO_PUBLIC_API_BASE_URL` slot (**placeholder — set the real URL after deploying**)
 - [x] `backend/.env.example` covers all required vars incl. `CRON_SECRET` / `ENABLE_SCHEDULER`
 
-**Manual deploy steps (you):**
-- [ ] Create a Railway or Render service from the repo (`backend/` dir, Dockerfile build); set all env vars from `.env.example` (generate fresh `AUTH_JWT_SECRET` + `CRON_SECRET` for prod; `ENABLE_SCHEDULER=false` if using host cron)
-- [ ] Set `BASE_URL` + `GOOGLE_REDIRECT_URI` to the deployed HTTPS URL; add that redirect URI in Google Cloud Console
-- [ ] Add a host cron job: daily 7 AM → `POST https://<host>/internal/cron/daily` with `x-cron-secret` header
-- [ ] Replace the placeholder URL in `eas.json`
-- [ ] Revoke the unused ElevenLabs key in local `backend/.env`; revoke the OpenAI key once the Gemini swap is verified (no longer used by code)
-- [ ] Enable the **Generative Language API** for the `GEMINI_API_KEY` (Google Cloud Console → enable API + add it to the key's API restrictions, or mint a key in Google AI Studio) — the current key returns `API_KEY_SERVICE_BLOCKED`
+**Deploy — ✅ LIVE at `https://api.paperboyhq.com` (Railway, 2026-09-29)**
+- [x] Railway service from the repo: Root Directory `backend`, **Builder = Dockerfile** (Railway's default Railpack builder ignored the Dockerfile and never compiled `dist/`; `backend/railway.json` pins the builder but Railway only reads it if the service's config path is `/backend/railway.json`)
+- [x] Env vars set on the service (not project-level shared variables), incl. `PORT=3001` — the domain's target port must match the port the app binds, or Railway returns 502 "Application failed to respond"
+- [x] `api.paperboyhq.com`: Cloudflare CNAME → Railway target, proxied (orange cloud) works; the custom domain must be attached to the *running* service
+- [x] `BASE_URL` / `GOOGLE_REDIRECT_URI` point at `https://api.paperboyhq.com`; `eas.json` production URL set
+- [x] No host cron: `ENABLE_SCHEDULER=true` (in-process), `CRON_SECRET` unset so `/internal/cron/daily` is closed (401)
+- [x] Gemini key: Generative Language API enabled (verified live in Part 4.5)
+- [x] Verified: `/health` ok (reaches Supabase), protected routes 401, OAuth `redirect_uri` correct, HSTS + rate-limit headers present
+- [x] **Google Cloud Console**: `https://api.paperboyhq.com/auth/google/callback` is in the OAuth client's redirect URIs
+- [x] **Production end-to-end (2026-09-30)**, driven from a desktop browser + curl (the simulator dev client had been deleted and a local rebuild needs more disk than is free): Google sign-in → Gmail sync → 202 → Gemini → TTS → Supabase → signed audio link served a playable 3m07s MP3
+- [ ] Real app against prod: covered by the first TestFlight build (EAS), or a simulator build once there's disk space
+- [x] **Google Cloud billing** re-enabled on project `494626578344` — TTS returns `403 BILLING_DISABLED` without it
+- [x] **Gemini prepaid credits** added in AI Studio → Billing — with billing on, Gemini is paid-tier and returns `402 RESOURCE_EXHAUSTED` when the prepaid balance is empty. Paid tier is also what makes the privacy policy's "not used for training" claim true (free-tier prompts may be used to improve Google products)
+- [x] Google Cloud budget alert set; AI Studio auto-charge capped
+- [x] Railway on the Hobby plan ($5/mo) — no trial expiry
+- [x] Leftover non-working Railway service deleted
+- [x] **All production credentials rotated (2026-09-30)**: Supabase secret key, Google OAuth client secret, Gemini + TTS API keys (each restricted to its one API), `AUTH_JWT_SECRET`, `TOKEN_ENCRYPTION_KEY`. Old values deleted at each provider and verified refused; prod E2E re-passed on the new set
+- [x] ElevenLabs + OpenAI keys revoked and removed from `backend/.env`
+- [x] Site redeployed — live privacy policy §6 names Railway
 
 ## Part 4.5 — LLM swap: OpenAI → Gemini ✅ DONE (code)
 
@@ -78,7 +90,7 @@ Roadmap for getting Paperboy published on the iOS App Store.
 - [x] Privacy policy written against what the code actually does (scopes, scan windows, what's stored, subprocessors, encryption, retention) with the **Google API Limited Use disclosure** reviewers look for
 - [x] `constants/links.ts` placeholders replaced with the real `paperboyhq.com` URLs + support address
 - [x] **30-day retention sweep** (`backend/src/services/security/retention.ts`): deletes episodes and their audio past `EPISODE_RETENTION_DAYS` (default 30). Runs hourly from the in-process scheduler *and* from `/internal/cron/daily`, so it works with `ENABLE_SCHEDULER` either way. Audio is removed before rows so no orphaned files are stranded in the private bucket
-- [ ] **Before publishing the site**: fill in `[STATE]` in `site/terms.html` §11, and name the hosting provider in `site/privacy.html` §6 once the backend is deployed
+- [x] **Before publishing the site**: terms §11 localized to Ontario; privacy §6 names Railway (live)
 
 ## Part 5 — External (no code)
 
